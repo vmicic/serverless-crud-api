@@ -36,7 +36,9 @@ const userSchema = new mongoose.Schema({
   environments: [environmentSchema],
 });
 
-const createEnv = async (environmentName) => {
+const createEnv = async (event, context, callback) => {
+  environmentName = event;
+
   try {
     await mongoose.connect(uri, {
       useNewUrlParser: true,
@@ -64,7 +66,6 @@ const createEnv = async (environmentName) => {
       { $push: { environments: environment } },
       { useFindAndModify: false },
       function (err) {
-        console.log(err);
         if (err) return handleError(err);
       }
     );
@@ -74,4 +75,28 @@ const createEnv = async (environmentName) => {
   return successResponse(environmentName, "Success!");
 };
 
-module.exports = { createEnv, successResponse, errorResponse };
+const getEnv = async (event, context, callback) => {
+  environmentName = event;
+
+  await mongoose.connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  const conn = mongoose.connection;
+
+  const User = conn.model("User", userSchema);
+
+  const query = { username: "ghost", "environments.name": environmentName };
+  User.findOne(query, function (err, doc) {
+    if (err) return handleError(err);
+    if (doc !== null) {
+      var environment = doc.environments.filter(function (el) {
+        return el.name === environmentName;
+      });
+      var entities = environment[0].entities;
+      return successResponse(entities, "Success");
+    }
+  });
+};
+
+module.exports = { createEnv, getEnv, successResponse, errorResponse };

@@ -67,6 +67,12 @@ functions:
       - httpApi:
           path: /environments
           method: PUT
+  getEnv:
+    handler: functions/environment.getEnv
+    events:
+      - httpApi:
+          path: /{env_id}
+          method: GET
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details
