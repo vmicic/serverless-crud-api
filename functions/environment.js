@@ -33,16 +33,19 @@ const createEnv = async (data) => {
       useUnifiedTopology: true,
     });
     const conn = mongoose.connection;
-    const Environment = conn.model(
-      "Environment",
-      new mongoose.Schema({ name: String })
+    const User = conn.model(
+      "User",
+      new mongoose.Schema({ username: String, environments: [String] })
     );
-    const environment = new Environment({ name: data });
-    environment.save(function (err) {
-      if (err) {
-        return console.error(err);
+    const query = { username: "ghost" };
+    User.findOneAndUpdate(
+      query,
+      { $push: { environments: data } },
+      { useFindAndModify: false },
+      function (err) {
+        if (err) return handleError(err);
       }
-    });
+    );
   } catch (error) {
     return errorResponse(data, "Error!");
   }
