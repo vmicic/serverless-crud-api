@@ -3,6 +3,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@serverless/fdk": "github:serverless/fdk",
     "mongoose": "^5.11.12"
   },
   "devDependencies": {
