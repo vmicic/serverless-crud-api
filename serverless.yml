@@ -64,7 +64,7 @@ functions:
   createEnv:
     handler: functions/environment.createEnv
     events:
-      - http:
+      - httpApi:
           path: /environments
           method: PUT
 #    The following are a few example events you can configure
