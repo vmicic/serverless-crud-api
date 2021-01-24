@@ -1,5 +1,4 @@
 const { User } = require('../models/user.js');
-const { Environment } = require('../models/environment.js');
 const mongoose = require('mongoose');
 
 const createEntity = async (event) => {
@@ -19,21 +18,25 @@ const createEntity = async (event) => {
     const env = segments[1];
 
     const body = event.body;
-
     const entityName = Object.keys(body)[0];
-    const entities = body[entityName];
-    //console.log(entities[0]);
+
+    Object.keys(body[entityName]).forEach((el) => {
+      // eslint-disable-next-line no-underscore-dangle
+      body[entityName][el]._id = mongoose.Types.ObjectId();
+    });
 
     const query = {
-      username: 'ghost',
+      username: username,
       'environments.name': env
     };
-    const doc = await User.findOneAndUpdate(
+
+    await User.findOneAndUpdate(
       query,
       { $push: { 'environments.$.entities': body } },
       { useFindAndModify: false }
     );
   }
+  await mongoose.connection.close();
 };
 
 module.exports = {
