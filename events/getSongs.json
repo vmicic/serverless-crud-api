@@ -1,0 +1,5 @@
+{
+  "resource": "/",
+  "path": "api/ghost/prod/songs",
+  "httpMethod": "GET"
+}

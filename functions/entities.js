@@ -1,44 +1,73 @@
 const mongoose = require('mongoose');
 const { User } = require('../models/user.js');
+const { mongodbUri } = require('../url-config');
 
-const createEntity = async (event) => {
-  const uri = 'mongodb://localhost:27017/serverless-crud';
-  await mongoose.connect(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-  const fullPath = event.path;
+const getUrlSegments = (url) => {
+  const fullPath = url;
   const sliceFrom = 'api/';
   const startIndex = fullPath.indexOf(sliceFrom);
   const slicedPath = fullPath.slice(startIndex + sliceFrom.length);
+  return slicedPath.split('/');
+};
 
-  const segments = slicedPath.split('/');
-  if (segments.length === 2) {
-    const username = segments[0];
-    const env = segments[1];
+const parseUrl = (url) => {
+  const segments = getUrlSegments(url);
+  const username = segments[0];
+  const env = segments[1];
+  return { username, env };
+};
 
-    const { body } = event;
-    const entityName = Object.keys(body)[0];
+const createEntity = async (event) => {
+  await mongoose.connect(mongodbUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 
-    Object.keys(body[entityName]).forEach((el) => {
-      // eslint-disable-next-line no-underscore-dangle
-      body[entityName][el]._id = mongoose.Types.ObjectId();
-    });
+  const { username, env } = parseUrl(event.path);
+  const { body } = event;
+  const entityName = Object.keys(body)[0];
 
-    const query = {
-      username,
-      'environments.name': env,
-    };
+  Object.keys(body[entityName]).forEach((el) => {
+    // eslint-disable-next-line no-underscore-dangle
+    body[entityName][el]._id = mongoose.Types.ObjectId();
+  });
 
-    await User.findOneAndUpdate(
-      query,
-      { $push: { 'environments.$.entities': body } },
-      { useFindAndModify: false },
-    ).exec();
-  }
+  const query = {
+    username,
+    'environments.name': env,
+  };
+
+  await User.findOneAndUpdate(
+    query,
+    { $push: { 'environments.$.entities': body } },
+    { useFindAndModify: false },
+  ).exec();
+  await mongoose.connection.close();
+};
+
+const getEntity = async (event) => {
+  await mongoose.connect(mongodbUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  const segments = getUrlSegments(event.path);
+  const username = segments[0];
+  const env = segments[1];
+  const entityName = segments[2];
+
+  const query = {
+    username: 'ghost',
+    'environments.name': 'prod',
+    'entities.songs.name': 'Hey Dude',
+  };
+  const doc = await User.findOne(query).exec();
+  console.log(doc);
+
   await mongoose.connection.close();
 };
 
 module.exports = {
   createEntity,
+  getEntity,
 };
