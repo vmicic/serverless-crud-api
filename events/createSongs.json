@@ -6,7 +6,7 @@
     "songs": [
       {
         "name": "Hey Jude",
-        "artist": [{ "name": "The Beatles" }, { "name": "Rolling Stones" }]
+        "artist": "The Beatles"
       },
       {
         "name": "Hey Dude",

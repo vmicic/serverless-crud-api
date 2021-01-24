@@ -32,6 +32,8 @@ const createEntity = async (event) => {
     body[entityName][el]._id = mongoose.Types.ObjectId();
   });
 
+  console.log(body);
+
   const query = {
     username,
     'environments.name': env,
@@ -56,15 +58,16 @@ const getEntity = async (event) => {
   const env = segments[1];
   const entityName = segments[2];
 
+  const entityQuery = 'environments.entities.'.concat(entityName);
   const query = {
-    username: 'ghost',
-    'environments.name': 'prod',
-    'entities.songs.name': 'Hey Dude',
+    username,
+    'environments.name': env,
   };
-  const doc = await User.findOne(query).exec();
-  console.log(doc);
+  query[entityQuery] = { $exists: true };
 
+  const doc = await User.findOne(query, 'environments.entities.$').exec();
   await mongoose.connection.close();
+  return doc.environments[0].entities[0];
 };
 
 module.exports = {
