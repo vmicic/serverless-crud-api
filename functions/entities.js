@@ -72,12 +72,15 @@ const getEntity = async (event) => {
   const env = segments[1];
   const entityName = segments[2];
 
-  const entityQuery = 'environments.entities.'.concat(entityName);
+  const elemMatchQuery = { name: env };
+  const entityNameQuery = 'entities.'.concat(entityName);
+  elemMatchQuery[entityNameQuery] = { $exists: true };
   const query = {
     username,
-    'environments.name': env,
+    environments: {
+      $elemMatch: elemMatchQuery,
+    },
   };
-  query[entityQuery] = { $exists: true };
 
   const doc = await User.findOne(query, 'environments.entities.$').exec();
   await mongoose.connection.close();
