@@ -1,0 +1,17 @@
+{
+  "resource": "/",
+  "path": "api/ghost/prod",
+  "httpMethod": "PUT",
+  "body": {
+    "songs": [
+      {
+        "name": "Hey Jude",
+        "artist": "The Beatles"
+      },
+      {
+        "name": "Hey Dude",
+        "artist": "The Beezels"
+      }
+    ]
+  }
+}

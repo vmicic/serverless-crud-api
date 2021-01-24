@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const { Environment } = require('../models/environment.js');
+const { User } = require('../models/user.js');
 
 const uri = 'mongodb://localhost:27017/serverless-crud';
 
@@ -26,16 +28,6 @@ const errorResponse = (event, message) => ({
   )
 });
 
-const environmentSchema = new mongoose.Schema({
-  name: String,
-  entities: []
-});
-
-const userSchema = new mongoose.Schema({
-  username: String,
-  environments: [environmentSchema]
-});
-
 const createEnv = async (event) => {
   let environmentName = event;
 
@@ -44,12 +36,6 @@ const createEnv = async (event) => {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
-
-    const conn = mongoose.connection;
-
-    const Environment = conn.model('Environment', environmentSchema);
-
-    const User = conn.model('User', userSchema);
 
     const environment = new Environment({
       name: environmentName,
@@ -83,9 +69,6 @@ const getEnv = async (event) => {
     useNewUrlParser: true,
     useUnifiedTopology: true
   });
-  const conn = mongoose.connection;
-
-  const User = conn.model('User', userSchema);
 
   const query = { username: 'ghost', 'environments.name': environmentName };
   const doc = await User.findOne(query).exec();
