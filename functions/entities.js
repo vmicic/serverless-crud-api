@@ -17,6 +17,25 @@ const parseUrl = (url) => {
   return { username, env };
 };
 
+/* eslint-disable no-param-reassign */
+const addIdForObjects = (content) => {
+  if (Array.isArray(content)) {
+    content.forEach((el) => {
+      addIdForObjects(el);
+    });
+  } else if (typeof content === 'object' && content !== null) {
+    Object.keys(content).forEach((el) => {
+      if (Array.isArray(content[el])) {
+        addIdForObjects(content[el]);
+      } else if (typeof content[el] === 'object' && content[el] !== null) {
+        addIdForObjects(content[el]);
+      }
+    });
+    // eslint-disable-next-line no-underscore-dangle
+    content._id = mongoose.Types.ObjectId();
+  }
+};
+
 const createEntity = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
@@ -27,12 +46,7 @@ const createEntity = async (event) => {
   const { body } = event;
   const entityName = Object.keys(body)[0];
 
-  Object.keys(body[entityName]).forEach((el) => {
-    // eslint-disable-next-line no-underscore-dangle
-    body[entityName][el]._id = mongoose.Types.ObjectId();
-  });
-
-  console.log(body);
+  addIdForObjects(body[entityName]);
 
   const query = {
     username,

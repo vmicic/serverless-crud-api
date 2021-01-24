@@ -1,0 +1,25 @@
+{
+  "resource": "/",
+  "path": "api/ghost/dev",
+  "httpMethod": "PUT",
+  "body": {
+    "posts": [
+      {
+        "content": "this is text",
+        "comments": [
+          {
+            "rating": 5,
+            "text": "hej this is great"
+          },
+          {
+            "rating": 5,
+            "text": "hey this is even better"
+          }
+        ]
+      },
+      {
+        "content": "this is text"
+      }
+    ]
+  }
+}
