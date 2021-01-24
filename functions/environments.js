@@ -30,7 +30,6 @@ const errorResponse = (event, message) => ({
 
 const createEnv = async (event) => {
   let environmentName = event;
-
   try {
     await mongoose.connect(uri, {
       useNewUrlParser: true,
@@ -47,18 +46,16 @@ const createEnv = async (event) => {
       'environments.name': { $ne: environmentName }
     };
 
-    User.findOneAndUpdate(
+    await User.findOneAndUpdate(
       query,
       { $push: { environments: environment } },
-      { useFindAndModify: false },
-      function callback(err) {
-        if (err) return console.log(err);
-        return 0;
-      }
+      { useFindAndModify: false }
     );
   } catch (error) {
     return errorResponse(environmentName, 'Error!');
   }
+
+  mongoose.connection.close();
   return successResponse(environmentName, 'Success!');
 };
 
@@ -78,6 +75,7 @@ const getEnv = async (event) => {
   });
 
   const entities = environment[0].entities;
+  mongoose.connection.close();
   return entities;
 };
 

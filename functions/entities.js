@@ -28,15 +28,10 @@ const createEntity = async (event) => {
       username: 'ghost',
       'environments.name': env
     };
-    User.findOneAndUpdate(
+    const doc = await User.findOneAndUpdate(
       query,
       { $push: { 'environments.$.entities': body } },
-      { useFindAndModify: false },
-      function callback(err, doc) {
-        if (err) return console.log(err);
-        console.log('found');
-        console.log(doc);
-      }
+      { useFindAndModify: false }
     );
   }
 };
