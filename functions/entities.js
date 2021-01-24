@@ -1,11 +1,11 @@
-const { User } = require('../models/user.js');
 const mongoose = require('mongoose');
+const { User } = require('../models/user.js');
 
 const createEntity = async (event) => {
   const uri = 'mongodb://localhost:27017/serverless-crud';
   await mongoose.connect(uri, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
   });
   const fullPath = event.path;
   const sliceFrom = 'api/';
@@ -17,7 +17,7 @@ const createEntity = async (event) => {
     const username = segments[0];
     const env = segments[1];
 
-    const body = event.body;
+    const { body } = event;
     const entityName = Object.keys(body)[0];
 
     Object.keys(body[entityName]).forEach((el) => {
@@ -26,19 +26,19 @@ const createEntity = async (event) => {
     });
 
     const query = {
-      username: username,
-      'environments.name': env
+      username,
+      'environments.name': env,
     };
 
     await User.findOneAndUpdate(
       query,
       { $push: { 'environments.$.entities': body } },
-      { useFindAndModify: false }
-    );
+      { useFindAndModify: false },
+    ).exec();
   }
   await mongoose.connection.close();
 };
 
 module.exports = {
-  createEntity
+  createEntity,
 };
