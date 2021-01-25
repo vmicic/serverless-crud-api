@@ -87,7 +87,60 @@ const getEntity = async (event) => {
   return doc.environments[0].entities[0];
 };
 
+const extendEntity = async (event) => {
+  await mongoose.connect(mongodbUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  const segments = getUrlSegments(event.path);
+  const username = segments[0];
+  const env = segments[1];
+  const entityName = segments[2];
+
+  const { body } = event;
+
+  addIdForObjects(body);
+
+  const query = {
+    username,
+  };
+
+  const envIdentifier = 'env';
+  const entitiesArrayIdentifier = 'entity';
+
+  const entitySelector = `environments.$[${envIdentifier}].entities.$[${entitiesArrayIdentifier}].${entityName}`;
+  const pushObject = {};
+  pushObject[entitySelector] = { $each: body };
+
+  const envNameSelector = `${envIdentifier}.name`;
+  const envNameObject = {};
+  envNameObject[envNameSelector] = env;
+
+  const entityNameSelector = `entity.${entityName}`;
+  const entityNameObject = {};
+  entityNameObject[entityNameSelector] = { $exists: true };
+
+  const arrayFilters = [];
+  arrayFilters.push(envNameObject);
+  arrayFilters.push(entityNameObject);
+
+  await User.findOneAndUpdate(
+    query,
+    {
+      $push: pushObject,
+    },
+    {
+      arrayFilters,
+      useFindAndModify: false,
+    },
+  ).exec();
+
+  await mongoose.connection.close();
+};
+
 module.exports = {
   createEntity,
   getEntity,
+  extendEntity,
 };
