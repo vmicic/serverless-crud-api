@@ -12,4 +12,11 @@ const getUsername = (url) => {
   return username;
 };
 
-module.exports = { getUsername, getUrlSegments };
+const getUsernameAndEnv = (url) => {
+  const segments = getUrlSegments(url);
+  const username = segments[0];
+  const env = segments[1];
+  return { username, env };
+};
+
+module.exports = { getUsername, getUrlSegments, getUsernameAndEnv };

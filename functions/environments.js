@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { Environment } = require('../models/environment.js');
 const { User } = require('../models/user.js');
-const { getUsername } = require('../util/urlUtil.js');
+const { getUsername, getUsernameAndEnv } = require('../util/urlUtils.js');
 const { mongodbUri } = require('../url-config');
 
 const createEnv = async (event) => {
@@ -32,19 +32,18 @@ const createEnv = async (event) => {
 };
 
 const getEnv = async (event) => {
-  const environmentName = event;
-
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
-  const query = { username: 'ghost', 'environments.name': environmentName };
+  const { username, env } = getUsernameAndEnv(event.path);
+
+  const query = { username, 'environments.name': env };
   const doc = await User.findOne(query, 'environments.$').exec();
 
-  const { entities } = doc.environments[0];
   await mongoose.connection.close();
-  return entities;
+  return doc.environments[0];
 };
 
 module.exports = {

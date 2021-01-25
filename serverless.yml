@@ -63,13 +63,13 @@ functions:
     handler: functions/environments.createEnv
     events:
       - httpApi:
-          path: /{username}/{environment}
+          path: /{username}
           method: PUT
   getEnv:
     handler: functions/environments.getEnv
     events:
       - httpApi:
-          path: /{env_id}
+          path: /{username}/{environment}
           method: GET
   createEntity:
     handler: functions/entities.createEntity
