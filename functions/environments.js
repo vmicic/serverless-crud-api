@@ -37,13 +37,9 @@ const getEnv = async (event) => {
   });
 
   const query = { username: 'ghost', 'environments.name': environmentName };
-  const doc = await User.findOne(query).exec();
+  const doc = await User.findOne(query, 'environments.$').exec();
 
-  const environment = doc.environments.filter(
-    (el) => el.name === environmentName,
-  );
-
-  const { entities } = environment[0];
+  const { entities } = doc.environments[0];
   await mongoose.connection.close();
   return entities;
 };
