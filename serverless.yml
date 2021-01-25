@@ -59,13 +59,11 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
-  hello:
-    handler: handler.hello
   createEnv:
     handler: functions/environments.createEnv
     events:
       - httpApi:
-          path: /environments
+          path: /{username}/{environment}
           method: PUT
   getEnv:
     handler: functions/environments.getEnv

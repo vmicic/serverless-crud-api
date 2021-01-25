@@ -1,14 +1,17 @@
 const mongoose = require('mongoose');
 const { Environment } = require('../models/environment.js');
 const { User } = require('../models/user.js');
+const { getUsername } = require('../util/urlUtil.js');
 const { mongodbUri } = require('../url-config');
 
 const createEnv = async (event) => {
-  const environmentName = event;
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
+
+  const environmentName = event.body;
+  const username = getUsername(event.path);
 
   const environment = new Environment({
     name: environmentName,
@@ -16,7 +19,7 @@ const createEnv = async (event) => {
   });
 
   const query = {
-    username: 'ghost',
+    username,
     'environments.name': { $ne: environmentName },
   };
 
