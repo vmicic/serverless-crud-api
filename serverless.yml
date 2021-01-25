@@ -75,19 +75,19 @@ functions:
     handler: functions/entities.createEntity
     events:
       - httpApi:
-          path: /test
+          path: /{username}/{environment}
           method: PUT
   getEntity:
     handler: functions/entities.getEntity
     events:
       - httpApi:
-          path: /test
+          path: /{username}/{environent}/{entity}
           method: GET
   extendEntity:
     handler: functions/entities.extendEntity
     events:
       - httpApi:
-          path: /entity/name
+          path: /{username}/{environent}/{entity}
           method: PUT
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events

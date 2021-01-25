@@ -19,4 +19,4 @@ const getUsernameAndEnv = (url) => {
   return { username, env };
 };
 
-module.exports = { getUsername, getUrlSegments, getUsernameAndEnv };
+module.exports = { getUsername, getUsernameAndEnv, getUrlSegments };

@@ -41,9 +41,8 @@ const getEnv = async (event) => {
 
   const query = { username, 'environments.name': env };
   const doc = await User.findOne(query, 'environments.$').exec();
-
   await mongoose.connection.close();
-  return doc.environments[0];
+  return doc.environments[0].entities;
 };
 
 module.exports = {

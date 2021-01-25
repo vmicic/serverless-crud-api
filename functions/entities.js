@@ -1,21 +1,7 @@
 const mongoose = require('mongoose');
 const { User } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
-
-const getUrlSegments = (url) => {
-  const fullPath = url;
-  const sliceFrom = 'api/';
-  const startIndex = fullPath.indexOf(sliceFrom);
-  const slicedPath = fullPath.slice(startIndex + sliceFrom.length);
-  return slicedPath.split('/');
-};
-
-const parseUrl = (url) => {
-  const segments = getUrlSegments(url);
-  const username = segments[0];
-  const env = segments[1];
-  return { username, env };
-};
+const { getUsernameAndEnv, getUrlSegments } = require('../util/urlUtils');
 
 /* eslint-disable no-param-reassign */
 const addIdForObjects = (content) => {
@@ -42,7 +28,7 @@ const createEntity = async (event) => {
     useUnifiedTopology: true,
   });
 
-  const { username, env } = parseUrl(event.path);
+  const { username, env } = getUsernameAndEnv(event.path);
   const { body } = event;
   const entityName = Object.keys(body)[0];
 
@@ -73,7 +59,7 @@ const getEntity = async (event) => {
   const entityName = segments[2];
 
   const elemMatchQuery = { name: env };
-  const entityNameQuery = 'entities.'.concat(entityName);
+  const entityNameQuery = `entities.${entityName}`;
   elemMatchQuery[entityNameQuery] = { $exists: true };
   const query = {
     username,
