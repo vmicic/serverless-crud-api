@@ -47,13 +47,35 @@ const complexQuery = async (event) => {
     const unwindMatch = [];
     segments.forEach((segment, i) => {
       if (i % 2 === 0) {
-        const unwindEntity = `$environments.entities.${segments[i]}`;
-        unwindMatch.push({ $unwind: unwindEntity });
-      } else {
-        const matchObject = {};
-        const matchQueryString = `environments.entities.${segments[i - 1]}._id`;
-        matchObject[matchQueryString] = mongoose.Types.ObjectId(segments[i]);
-        unwindMatch.push({ $match: matchObject });
+        if (unwindMatch.length === 0) {
+          const unwindString = `$environments.entities.${segments[i]}`;
+          unwindMatch.push({ $unwind: unwindString });
+        } else {
+          const unwindString = `${
+            unwindMatch[unwindMatch.length - 2].$unwind
+          }.${segments[i]}`;
+          unwindMatch.push({ $unwind: unwindString });
+        }
+      } else if (i % 2 === 1) {
+        if (unwindMatch.length === 1) {
+          const matchCondition = {};
+          const matchQueryString = `environments.entities.${
+            segments[i - 1]
+          }._id`;
+          matchCondition[matchQueryString] = mongoose.Types.ObjectId(
+            segments[i],
+          );
+          unwindMatch.push({ $match: matchCondition });
+        } else {
+          const matchCondition = {};
+          const matchQueryString = `${unwindMatch[
+            unwindMatch.length - 1
+          ].$unwind.substring(1)}._id`;
+          matchCondition[matchQueryString] = mongoose.Types.ObjectId(
+            segments[i],
+          );
+          unwindMatch.push({ $match: matchCondition });
+        }
       }
     });
 
