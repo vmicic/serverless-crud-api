@@ -1,5 +1,5 @@
 {
   "resource": "/",
-  "path": "api/ghost/dev/posts/600da6dc10376f7420890000",
+  "path": "api/ghost/dev/posts/600da6dc10376f7420890000/comments",
   "httpMethod": "GET"
 }

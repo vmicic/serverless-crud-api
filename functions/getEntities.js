@@ -33,6 +33,55 @@ const getEntity = async (event) => {
   return doc.environments[0].entities[0];
 };
 
+const getQueryParams = (segments) => {
+  const queryTemplate = [];
+  segments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      if (i + 1 !== segments.length) {
+        if (queryTemplate.length === 0) {
+          const unwindString = `$environments.entities.${segments[i]}`;
+          queryTemplate.push({ $unwind: unwindString });
+        } else {
+          const unwindString = `${
+            queryTemplate[queryTemplate.length - 2].$unwind
+          }.${segments[i]}`;
+          queryTemplate.push({ $unwind: unwindString });
+        }
+      }
+    } else if (i % 2 === 1) {
+      if (queryTemplate.length === 1) {
+        const matchCondition = {};
+        const matchQueryString = `environments.entities.${segments[i - 1]}._id`;
+        matchCondition[matchQueryString] = mongoose.Types.ObjectId(segments[i]);
+        queryTemplate.push({ $match: matchCondition });
+      } else {
+        const matchCondition = {};
+        const matchQueryString = `${queryTemplate[
+          queryTemplate.length - 1
+        ].$unwind.substring(1)}._id`;
+        matchCondition[matchQueryString] = mongoose.Types.ObjectId(segments[i]);
+        queryTemplate.push({ $match: matchCondition });
+      }
+    }
+  });
+
+  queryTemplate.push({
+    $replaceRoot: { newRoot: queryTemplate[queryTemplate.length - 2].$unwind },
+  });
+
+  return queryTemplate;
+};
+
+const getReturnValue = (doc, segments) => {
+  if (doc.length !== 0) {
+    if (segments.length % 2 === 0) {
+      return doc[0];
+    }
+    return doc[0][segments.slice(-1).pop()];
+  }
+  return [];
+};
+
 const complexQuery = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
@@ -42,62 +91,19 @@ const complexQuery = async (event) => {
   const { username, env } = getUsernameAndEnv(event.path);
   const segments = getSegmentsWithoutUsernameAndEnv(event.path);
 
-  if (segments.length % 2 !== 0) {
-  } else {
-    const unwindMatch = [];
-    segments.forEach((segment, i) => {
-      if (i % 2 === 0) {
-        if (unwindMatch.length === 0) {
-          const unwindString = `$environments.entities.${segments[i]}`;
-          unwindMatch.push({ $unwind: unwindString });
-        } else {
-          const unwindString = `${
-            unwindMatch[unwindMatch.length - 2].$unwind
-          }.${segments[i]}`;
-          unwindMatch.push({ $unwind: unwindString });
-        }
-      } else if (i % 2 === 1) {
-        if (unwindMatch.length === 1) {
-          const matchCondition = {};
-          const matchQueryString = `environments.entities.${
-            segments[i - 1]
-          }._id`;
-          matchCondition[matchQueryString] = mongoose.Types.ObjectId(
-            segments[i],
-          );
-          unwindMatch.push({ $match: matchCondition });
-        } else {
-          const matchCondition = {};
-          const matchQueryString = `${unwindMatch[
-            unwindMatch.length - 1
-          ].$unwind.substring(1)}._id`;
-          matchCondition[matchQueryString] = mongoose.Types.ObjectId(
-            segments[i],
-          );
-          unwindMatch.push({ $match: matchCondition });
-        }
-      }
-    });
+  const queryTemplate = getQueryParams(segments);
 
-    unwindMatch.push({
-      $replaceRoot: { newRoot: unwindMatch[unwindMatch.length - 2].$unwind },
-    });
-
-    const agregateTemplate = [
-      { $match: { username } },
-      {
-        $unwind: '$environments',
-      },
-      { $match: { 'environments.name': env } },
-      { $unwind: '$environments.entities' },
-    ].concat(unwindMatch);
-    const doc = await User.aggregate(agregateTemplate).exec();
-    await mongoose.connection.close();
-    if (doc.length !== 0) {
-      return doc[0];
-    }
-    return [];
-  }
+  const agregateTemplate = [
+    { $match: { username } },
+    {
+      $unwind: '$environments',
+    },
+    { $match: { 'environments.name': env } },
+    { $unwind: '$environments.entities' },
+  ].concat(queryTemplate);
+  const doc = await User.aggregate(agregateTemplate).exec();
+  await mongoose.connection.close();
+  return getReturnValue(doc, segments);
 };
 
 module.exports = {
