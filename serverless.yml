@@ -78,7 +78,7 @@ functions:
           path: /{username}/{environment}
           method: PUT
   getEntity:
-    handler: functions/entities.getEntity
+    handler: functions/getEntities.getEntity
     events:
       - httpApi:
           path: /{username}/{environent}/{entity}
