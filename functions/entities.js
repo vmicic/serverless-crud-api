@@ -47,32 +47,6 @@ const createEntity = async (event) => {
   await mongoose.connection.close();
 };
 
-const getEntity = async (event) => {
-  await mongoose.connect(mongodbUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const segments = getUrlSegments(event.path);
-  const username = segments[0];
-  const env = segments[1];
-  const entityName = segments[2];
-
-  const elemMatchQuery = { name: env };
-  const entityNameQuery = `entities.${entityName}`;
-  elemMatchQuery[entityNameQuery] = { $exists: true };
-  const query = {
-    username,
-    environments: {
-      $elemMatch: elemMatchQuery,
-    },
-  };
-
-  const doc = await User.findOne(query, 'environments.entities.$').exec();
-  await mongoose.connection.close();
-  return doc.environments[0].entities[0];
-};
-
 const extendEntity = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
@@ -127,6 +101,5 @@ const extendEntity = async (event) => {
 
 module.exports = {
   createEntity,
-  getEntity,
   extendEntity,
 };

@@ -83,6 +83,12 @@ functions:
       - httpApi:
           path: /{username}/{environent}/{entity}
           method: GET
+  complexQuery:
+    handler: functions/getEntities.complexQuery
+    events:
+      - httpApi:
+          path: /{username}/{environent}/{entity}/*
+          method: GET
   extendEntity:
     handler: functions/entities.extendEntity
     events:

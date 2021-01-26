@@ -19,4 +19,14 @@ const getUsernameAndEnv = (url) => {
   return { username, env };
 };
 
-module.exports = { getUsername, getUsernameAndEnv, getUrlSegments };
+const getSegmentsWithoutUsernameAndEnv = (url) => {
+  const segments = getUrlSegments(url);
+  return segments.slice(2);
+};
+
+module.exports = {
+  getUsername,
+  getUsernameAndEnv,
+  getUrlSegments,
+  getSegmentsWithoutUsernameAndEnv,
+};
