@@ -1,11 +1,7 @@
 const mongoose = require('mongoose');
 const { User } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
-const {
-  getUsernameAndEnv,
-  getUrlSegments,
-  getSegmentsWithoutUsernameAndEnv,
-} = require('../util/urlUtils');
+const { getUsernameAndEnv, getUrlSegments } = require('../util/urlUtils');
 
 /* eslint-disable no-param-reassign */
 const addIdForObjects = (content) => {
@@ -49,59 +45,6 @@ const createEntity = async (event) => {
     { useFindAndModify: false },
   ).exec();
   await mongoose.connection.close();
-};
-
-const getEntity = async (event) => {
-  await mongoose.connect(mongodbUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const segments = getUrlSegments(event.path);
-  const username = segments[0];
-  const env = segments[1];
-  const entityName = segments[2];
-
-  const elemMatchQuery = { name: env };
-  const entityNameQuery = `entities.${entityName}`;
-  elemMatchQuery[entityNameQuery] = { $exists: true };
-  const query = {
-    username,
-    environments: {
-      $elemMatch: elemMatchQuery,
-    },
-  };
-
-  const doc = await User.findOne(query, 'environments.entities.$').exec();
-  await mongoose.connection.close();
-  return doc.environments[0].entities[0];
-};
-
-const complexQuery = async (event) => {
-  await mongoose.connect(mongodbUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const { username, env } = getUsernameAndEnv(event.path);
-  const segments = getSegmentsWithoutUsernameAndEnv(event.path);
-
-  const postId = mongoose.Types.ObjectId('600da6dc10376f7420890000');
-
-  const doc = await User.aggregate([
-    { $match: { username } },
-    {
-      $unwind: '$environments',
-    },
-    { $match: { 'environments.name': env } },
-    { $unwind: '$environments.entities' },
-    { $match: { 'environments.entities.posts': { $exists: true } } },
-    { $unwind: '$environments.entities.posts' },
-    { $match: { 'environments.entities.posts._id': postId } },
-  ]).exec();
-  // const doc = await User.findOne(query, 'environments.entities.posts.$').exec();
-  await mongoose.connection.close();
-  console.log(doc[0].environments.entities.posts.comments);
 };
 
 const extendEntity = async (event) => {
@@ -158,7 +101,5 @@ const extendEntity = async (event) => {
 
 module.exports = {
   createEntity,
-  getEntity,
-  complexQuery,
   extendEntity,
 };

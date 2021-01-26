@@ -84,7 +84,7 @@ functions:
           path: /{username}/{environent}/{entity}
           method: GET
   complexQuery:
-    handler: functions/entities.complexQuery
+    handler: functions/getEntities.complexQuery
     events:
       - httpApi:
           path: /{username}/{environent}/{entity}/*
