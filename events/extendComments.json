@@ -1,20 +1,15 @@
 {
   "resource": "/",
-  "path": "api/ghost/dev/posts",
+  "path": "api/ghost/dev/posts/600da6dc10376f7420890000/comments",
   "httpMethod": "PUT",
   "body": [
     {
-      "content": "this is new post",
-      "comments": [
-        {
-          "rating": 5,
-          "text": "hey new post great"
-        },
-        {
-          "rating": 3,
-          "text": "hey this is even better"
-        }
-      ]
+      "rating": 5,
+      "text": "hey new post great"
+    },
+    {
+      "rating": 3,
+      "text": "hey this is even better"
     }
   ]
 }
