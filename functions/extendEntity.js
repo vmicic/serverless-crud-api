@@ -32,37 +32,45 @@ const extendEntity = async (event) => {
     useUnifiedTopology: true,
   });
 
-  const segments = getUrlSegments(event.path);
-  const username = segments[0];
-  const env = segments[1];
-  const entityName = segments[2];
+  const { username, env } = getUsernameAndEnv(event.path);
+  const segments = getSegmentsWithoutUsernameAndEnv(event.path);
+  const entitiesToAdd = event.body;
 
-  const { body } = event;
-
-  addIdForObjects(body);
+  addIdForObjects(entitiesToAdd);
 
   const query = {
     username,
   };
 
-  const envIdentifier = 'env';
-  const entitiesArrayIdentifier = 'entity';
-
-  const entitySelector = `environments.$[${envIdentifier}].entities.$[${entitiesArrayIdentifier}].${entityName}`;
+  const identifiers = [];
+  const entityArrayFilters = [];
   const pushObject = {};
-  pushObject[entitySelector] = { $each: body };
+  const entityIdentifier = 'entityIdentifier';
+  let pushSelector = `environments.$[envIdentifier].entities.$[${entityIdentifier}]`;
+  segments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      if (i + 1 !== segments.length) {
+        const identifier = `${segment}Identifier`;
+        identifiers.push(identifier);
+        pushSelector = `${pushSelector}.${segment}.$[${identifier}]`;
+      } else {
+        pushSelector = `${pushSelector}.${segment}`;
+      }
+    } else {
+      const entityArrayFilter = {};
+      const entityArrayFilterSelector = `${identifiers.slice(-1).pop()}._id`;
+      entityArrayFilter[entityArrayFilterSelector] = mongoose.Types.ObjectId(
+        segment,
+      );
+      entityArrayFilters.push(entityArrayFilter);
+    }
+  });
 
-  const envNameSelector = `${envIdentifier}.name`;
-  const envNameObject = {};
-  envNameObject[envNameSelector] = env;
+  pushObject[pushSelector] = { $each: entitiesToAdd };
 
-  const entityNameSelector = `${entitiesArrayIdentifier}.${entityName}`;
-  const entityNameObject = {};
-  entityNameObject[entityNameSelector] = { $exists: true };
-
-  const arrayFilters = [];
-  arrayFilters.push(envNameObject);
-  arrayFilters.push(entityNameObject);
+  const firstEntityFilter = {};
+  const firstEntityFilterSelector = `${entityIdentifier}.${segments[0]}`;
+  firstEntityFilter[firstEntityFilterSelector] = { $exists: true };
 
   await User.findOneAndUpdate(
     query,
@@ -70,47 +78,9 @@ const extendEntity = async (event) => {
       $push: pushObject,
     },
     {
-      arrayFilters,
-      useFindAndModify: false,
-    },
-  ).exec();
-
-  await mongoose.connection.close();
-};
-
-const extendEntityDeep = async (event) => {
-  await mongoose.connect(mongodbUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const { username, env } = getUsernameAndEnv(event.path);
-  const segments = getSegmentsWithoutUsernameAndEnv(event.path);
-  const entitiesToAdd = event.body;
-
-  const query = {
-    username,
-  };
-
-  addIdForObjects(entitiesToAdd);
-
-  console.log(entitiesToAdd);
-
-  await User.findOneAndUpdate(
-    query,
-    {
-      $push: {
-        'environments.$[envIdentifier].entities.$[entity].posts.$[post].comments': {
-          $each: entitiesToAdd,
-        },
-      },
-    },
-    {
-      arrayFilters: [
-        { 'envIdentifier.name': env },
-        { 'entity.posts': { $exists: true } },
-        { 'post._id': mongoose.Types.ObjectId('600da6dc10376f7420890000') },
-      ],
+      arrayFilters: [{ 'envIdentifier.name': env }, firstEntityFilter].concat(
+        entityArrayFilters,
+      ),
       useFindAndModify: false,
     },
   ).exec();
@@ -120,5 +90,4 @@ const extendEntityDeep = async (event) => {
 
 module.exports = {
   extendEntity,
-  extendEntityDeep,
 };
