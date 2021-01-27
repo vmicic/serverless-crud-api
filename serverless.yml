@@ -81,12 +81,6 @@ functions:
     handler: functions/getEntities.getEntity
     events:
       - httpApi:
-          path: /{username}/{environent}/{entity}
-          method: GET
-  getEntityDeep:
-    handler: functions/getEntities.getEntityDeep
-    events:
-      - httpApi:
           path: /{username}/{environent}/{entity}/*
           method: GET
   extendEntity:

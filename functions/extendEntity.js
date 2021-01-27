@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const { User } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 const {
-  getUrlSegments,
   getUsernameAndEnv,
   getSegmentsWithoutUsernameAndEnv,
 } = require('../util/urlUtils');

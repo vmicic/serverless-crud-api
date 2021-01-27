@@ -3,39 +3,8 @@ const { User } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 const {
   getUsernameAndEnv,
-  getUrlSegments,
   getSegmentsWithoutUsernameAndEnv,
 } = require('../util/urlUtils');
-
-const getEntity = async (event) => {
-  await mongoose.connect(mongodbUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const segments = getUrlSegments(event.path);
-  const username = segments[0];
-  const env = segments[1];
-  const entityName = segments[2];
-
-  const matchTemplate = {};
-  const matchString = `environments.entities.${entityName}`;
-  matchTemplate[matchString] = { $exists: true };
-
-  const agregateTemplate = [
-    { $match: { username } },
-    {
-      $unwind: '$environments',
-    },
-    { $match: { 'environments.name': env } },
-    { $unwind: '$environments.entities' },
-    { $match: matchTemplate },
-    { $replaceRoot: { newRoot: '$environments.entities' } },
-  ];
-  const doc = await User.aggregate(agregateTemplate).exec();
-  await mongoose.connection.close();
-  return doc;
-};
 
 const getQueryParams = (segments) => {
   const queryTemplate = [];
@@ -43,35 +12,46 @@ const getQueryParams = (segments) => {
     if (i % 2 === 0) {
       if (i + 1 !== segments.length) {
         if (queryTemplate.length === 0) {
-          const unwindString = `$environments.entities.${segments[i]}`;
-          queryTemplate.push({ $unwind: unwindString });
+          queryTemplate.push({
+            $unwind: `$environments.entities.${segment}`,
+          });
         } else {
-          const unwindString = `${
-            queryTemplate[queryTemplate.length - 2].$unwind
-          }.${segments[i]}`;
-          queryTemplate.push({ $unwind: unwindString });
+          queryTemplate.push({
+            $unwind: `${
+              queryTemplate[queryTemplate.length - 2].$unwind
+            }.${segment}`,
+          });
         }
       }
     } else if (i % 2 === 1) {
       if (queryTemplate.length === 1) {
         const matchCondition = {};
-        const matchQueryString = `environments.entities.${segments[i - 1]}._id`;
-        matchCondition[matchQueryString] = mongoose.Types.ObjectId(segments[i]);
+        matchCondition[
+          `environments.entities.${segments[i - 1]}._id`
+        ] = mongoose.Types.ObjectId(segment);
         queryTemplate.push({ $match: matchCondition });
       } else {
         const matchCondition = {};
-        const matchQueryString = `${queryTemplate[
-          queryTemplate.length - 1
-        ].$unwind.substring(1)}._id`;
-        matchCondition[matchQueryString] = mongoose.Types.ObjectId(segments[i]);
+        matchCondition[
+          `${queryTemplate[queryTemplate.length - 1].$unwind.substring(1)}._id`
+        ] = mongoose.Types.ObjectId(segment);
         queryTemplate.push({ $match: matchCondition });
       }
     }
   });
 
-  queryTemplate.push({
-    $replaceRoot: { newRoot: queryTemplate[queryTemplate.length - 2].$unwind },
-  });
+  // for queries with no nested entities
+  if (queryTemplate.length < 2) {
+    queryTemplate.push({ $replaceRoot: { newRoot: '$environments.entities' } });
+  } else {
+    queryTemplate.push({
+      $replaceRoot: {
+        newRoot: queryTemplate[queryTemplate.length - 2].$unwind,
+      },
+    });
+  }
+
+  console.log(queryTemplate);
 
   return queryTemplate;
 };
@@ -86,7 +66,7 @@ const getReturnValue = (doc, segments) => {
   return [];
 };
 
-const getEntityDeep = async (event) => {
+const getEntity = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -106,11 +86,11 @@ const getEntityDeep = async (event) => {
     { $unwind: '$environments.entities' },
   ].concat(queryTemplate);
   const doc = await User.aggregate(agregateTemplate).exec();
+  console.log(doc);
   await mongoose.connection.close();
   return getReturnValue(doc, segments);
 };
 
 module.exports = {
   getEntity,
-  getEntityDeep,
 };

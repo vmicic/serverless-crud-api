@@ -9,7 +9,12 @@
         "comments": [
           {
             "rating": 5,
-            "text": "hej this is great"
+            "text": "hej this is great",
+            "authors": [
+              {
+                "name": "ziks"
+              }
+            ]
           },
           {
             "rating": 5,
