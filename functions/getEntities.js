@@ -86,7 +86,7 @@ const getReturnValue = (doc, segments) => {
   return [];
 };
 
-const complexQuery = async (event) => {
+const getEntityDeep = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -112,5 +112,5 @@ const complexQuery = async (event) => {
 
 module.exports = {
   getEntity,
-  complexQuery,
+  getEntityDeep,
 };
