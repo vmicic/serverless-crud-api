@@ -9,39 +9,35 @@ const {
 const getQueryParams = (segments) => {
   const queryTemplate = [];
   segments.forEach((segment, i) => {
-    if (i % 2 === 0) {
-      if (i + 1 !== segments.length) {
-        if (queryTemplate.length === 0) {
-          queryTemplate.push({
-            $unwind: `$environments.entities.${segment}`,
-          });
-        } else {
-          queryTemplate.push({
-            $unwind: `${
-              queryTemplate[queryTemplate.length - 2].$unwind
-            }.${segment}`,
-          });
-        }
-      }
-    } else if (i % 2 === 1) {
-      if (queryTemplate.length === 1) {
-        const matchCondition = {};
+    if (i % 2 === 1) {
+      const entityId = mongoose.Types.ObjectId(segment);
+      const matchCondition = {};
+      if (queryTemplate.length === 0) {
+        queryTemplate.push({
+          $unwind: `$environments.entities.${segments[i - 1]}`,
+        });
+
         matchCondition[
           `environments.entities.${segments[i - 1]}._id`
-        ] = mongoose.Types.ObjectId(segment);
+        ] = entityId;
         queryTemplate.push({ $match: matchCondition });
       } else {
-        const matchCondition = {};
+        queryTemplate.push({
+          $unwind: `${queryTemplate[queryTemplate.length - 2].$unwind}.${
+            segments[i - 1]
+          }`,
+        });
+
         matchCondition[
           `${queryTemplate[queryTemplate.length - 1].$unwind.substring(1)}._id`
-        ] = mongoose.Types.ObjectId(segment);
+        ] = entityId;
         queryTemplate.push({ $match: matchCondition });
       }
     }
   });
 
   // for queries with no nested entities
-  if (queryTemplate.length < 2) {
+  if (queryTemplate.length === 0) {
     queryTemplate.push({ $replaceRoot: { newRoot: '$environments.entities' } });
   } else {
     queryTemplate.push({
@@ -51,19 +47,7 @@ const getQueryParams = (segments) => {
     });
   }
 
-  console.log(queryTemplate);
-
   return queryTemplate;
-};
-
-const getReturnValue = (doc, segments) => {
-  if (doc.length !== 0) {
-    if (segments.length % 2 === 0) {
-      return doc[0];
-    }
-    return doc[0][segments.slice(-1).pop()];
-  }
-  return [];
 };
 
 const getEntity = async (event) => {
@@ -74,6 +58,12 @@ const getEntity = async (event) => {
 
   const { username, env } = getUsernameAndEnv(event.path);
   const segments = getSegmentsWithoutUsernameAndEnv(event.path);
+
+  let lastSegment;
+  const segmentLengthOdd = segments.length % 2 === 1;
+  if (segmentLengthOdd) {
+    lastSegment = segments.pop();
+  }
 
   const queryTemplate = getQueryParams(segments);
 
@@ -86,9 +76,16 @@ const getEntity = async (event) => {
     { $unwind: '$environments.entities' },
   ].concat(queryTemplate);
   const doc = await User.aggregate(agregateTemplate).exec();
-  console.log(doc);
   await mongoose.connection.close();
-  return getReturnValue(doc, segments);
+
+  if (doc.length === 0) {
+    return [];
+  }
+
+  if (segmentLengthOdd) {
+    return doc[0][lastSegment];
+  }
+  return doc[0];
 };
 
 module.exports = {
