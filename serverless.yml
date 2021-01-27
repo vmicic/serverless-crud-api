@@ -83,17 +83,23 @@ functions:
       - httpApi:
           path: /{username}/{environent}/{entity}
           method: GET
-  complexQuery:
-    handler: functions/getEntities.complexQuery
+  getEntityDeep:
+    handler: functions/getEntities.getEntityDeep
     events:
       - httpApi:
           path: /{username}/{environent}/{entity}/*
           method: GET
   extendEntity:
-    handler: functions/entities.extendEntity
+    handler: functions/extendEntity.extendEntity
     events:
       - httpApi:
           path: /{username}/{environent}/{entity}
+          method: PUT
+  extendEntityDeep:
+    handler: functions/extendEntity.extendEntityDeep
+    events:
+      - httpApi:
+          path: /{username}/{environent}/{entity}/*
           method: PUT
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
