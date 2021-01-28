@@ -89,23 +89,46 @@ const getQueryParams = (segments, searchParams) => {
     matchCondition[entitySelector] = { $exists: true };
     queryTemplate.push({ $match: matchCondition });
 
-    if (searchParams) {
+    if (searchParams.keys().next().done === false) {
       queryTemplate = queryTemplate.concat(
-        getSearchParamsQuery(
-          `environments.entities.${lastSegment}`,
-          searchParams,
-        ),
+        getSearchParamsQuery(entitySelector, searchParams),
+      );
+      queryTemplate.push({
+        $replaceRoot: { newRoot: `$${entitySelector}` },
+      });
+    } else {
+      queryTemplate.push(
+        { $unwind: `$${entitySelector}` },
+        {
+          $replaceRoot: { newRoot: `$${entitySelector}` },
+        },
       );
     }
-    queryTemplate.push({
-      $replaceRoot: { newRoot: '$environments.entities' },
-    });
   } else {
-    queryTemplate.push({
-      $replaceRoot: {
-        newRoot: queryTemplate[queryTemplate.length - 2].$unwind,
-      },
-    });
+    const entitySelector = `${
+      queryTemplate[queryTemplate.length - 2].$unwind
+    }.${lastSegment}`.substring(1);
+
+    if (searchParams.keys().next().done === false) {
+      queryTemplate = queryTemplate.concat(
+        getSearchParamsQuery(entitySelector, searchParams),
+      );
+    }
+
+    if (segmentLengthOdd) {
+      queryTemplate.push(
+        { $unwind: `$${entitySelector}` },
+        {
+          $replaceRoot: { newRoot: `$${entitySelector}` },
+        },
+      );
+    } else {
+      queryTemplate.push({
+        $replaceRoot: {
+          newRoot: `${queryTemplate[queryTemplate.length - 2].$unwind}`,
+        },
+      });
+    }
   }
 
   return queryTemplate;
@@ -123,6 +146,7 @@ const getEntity = async (event) => {
   const { searchParams } = url;
 
   const queryTemplate = getQueryParams([...pathSegments], searchParams);
+  console.log(queryTemplate);
 
   const agregateTemplate = [
     { $match: { username } },
@@ -133,8 +157,8 @@ const getEntity = async (event) => {
     { $unwind: '$environments.entities' },
   ].concat(queryTemplate);
   const doc = await User.aggregate(agregateTemplate).exec();
-  console.log(doc);
   await mongoose.connection.close();
+  return doc;
   // return doc.forEach((entity) => console.log(entity['posts']));
   // return getReturnValue(doc, url);
 };
