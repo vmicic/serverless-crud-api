@@ -1,0 +1,6 @@
+{
+  "resource": "/",
+  "path": "api/ghost",
+  "httpMethod": "PUT",
+  "body": "dev"
+}

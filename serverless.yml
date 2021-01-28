@@ -18,7 +18,7 @@ service: fiverr-api
 
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
-frameworkVersion: "2"
+frameworkVersion: '2'
 
 provider:
   name: aws
@@ -59,13 +59,35 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
-  hello:
-    handler: handler.hello
   createEnv:
-    handler: functions/environment.createEnv
+    handler: functions/environments.createEnv
     events:
-      - http:
-          path: /environments
+      - httpApi:
+          path: /{username}
+          method: PUT
+  getEnv:
+    handler: functions/environments.getEnv
+    events:
+      - httpApi:
+          path: /{username}/{environment}
+          method: GET
+  createEntity:
+    handler: functions/entities.createEntity
+    events:
+      - httpApi:
+          path: /{username}/{environment}
+          method: PUT
+  getEntity:
+    handler: functions/getEntities.getEntity
+    events:
+      - httpApi:
+          path: /{username}/{environent}/{entity}/*
+          method: GET
+  extendEntity:
+    handler: functions/extendEntity.extendEntity
+    events:
+      - httpApi:
+          path: /{username}/{environent}/*
           method: PUT
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events

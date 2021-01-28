@@ -1,0 +1,21 @@
+{
+  "resource": "/",
+  "path": "api/ghost/red",
+  "httpMethod": "PUT",
+  "body": {
+    "songs": [
+      {
+        "author": {
+          "name": "zika",
+          "lastname": "pika"
+        },
+        "name": "Hey Jude",
+        "artist": "The Beatles"
+      },
+      {
+        "name": "Hey Dude",
+        "artist": "The Beezels"
+      }
+    ]
+  }
+}
