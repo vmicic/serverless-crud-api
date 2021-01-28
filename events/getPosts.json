@@ -1,5 +1,5 @@
 {
   "resource": "/",
-  "path": "localhost:3030/api/ghost/dev/posts",
+  "path": "localhost:3030/api/ghost/dev/posts?content=this+is+text%&rating=5",
   "httpMethod": "GET"
 }
