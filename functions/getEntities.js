@@ -6,7 +6,10 @@ const {
   getSegmentsWithoutUsernameAndEnv,
 } = require('../util/urlUtils');
 
-const getReturnValue = (doc, pathSegments) => {
+const getReturnValue = (doc, url) => {
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(url.pathname);
+  const { searchParams } = url;
+
   if (doc.length === 0) {
     return [];
   }
@@ -18,12 +21,29 @@ const getReturnValue = (doc, pathSegments) => {
   return doc[0][pathSegments.slice(-1).pop()];
 };
 
-const getSearchParamsQuery = (searchParams) => {
-  return [
-    { $unwind: '$environments.entities.posts' },
-    { $match: { 'environments.entities.posts.content': 'great post' } },
-    { $match: { 'environments.entities.posts.rating': 5.0 } },
-  ];
+// { $match: { 'environments.entities.posts': { $exists: true } } },
+// { $unwind: '$environments.entities.posts' },
+// { $match: { 'environments.entities.posts.content': 'great post' } },
+// { $match: { 'environments.entities.posts.rating': 5.0 } },
+// { $replaceRoot: { newRoot: '$environments.entities' } },
+
+const getSearchParamsQuery = (baseSelectorStr, searchParams) => {
+  const queryPropTemplate = [];
+  queryPropTemplate.push({
+    $unwind: `$${baseSelectorStr}`,
+  });
+
+  searchParams.forEach((value, key) => {
+    const matchObject = {};
+    if (+value) {
+      matchObject[`${baseSelectorStr}.${key}`] = +value;
+    } else {
+      matchObject[`${baseSelectorStr}.${key}`] = value;
+    }
+    queryPropTemplate.push({ $match: matchObject });
+  });
+
+  return queryPropTemplate;
 };
 
 const getQueryParams = (segments, searchParams) => {
@@ -70,7 +90,12 @@ const getQueryParams = (segments, searchParams) => {
     queryTemplate.push({ $match: matchCondition });
 
     if (searchParams) {
-      queryTemplate = queryTemplate.concat(getSearchParamsQuery(searchParams));
+      queryTemplate = queryTemplate.concat(
+        getSearchParamsQuery(
+          `environments.entities.${lastSegment}`,
+          searchParams,
+        ),
+      );
     }
     queryTemplate.push({
       $replaceRoot: { newRoot: '$environments.entities' },
@@ -85,16 +110,8 @@ const getQueryParams = (segments, searchParams) => {
 
   return queryTemplate;
 };
-const isNumeric = (str) => {
-  if (typeof str !== 'string') return false;
-  return !Number.isNaN(str);
-};
 
 const getEntity = async (event) => {
-  const numStr = '5.10da';
-  console.log(isNumeric(numStr));
-  console.log(+numStr);
-
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -103,11 +120,9 @@ const getEntity = async (event) => {
   const url = new URL(event.path);
   const { username, env } = getUsernameAndEnv(url.pathname);
   const pathSegments = getSegmentsWithoutUsernameAndEnv(url.pathname);
-  const searchParams = url.searchParams;
-  console.log(searchParams);
+  const { searchParams } = url;
 
   const queryTemplate = getQueryParams([...pathSegments], searchParams);
-  console.log(queryTemplate);
 
   const agregateTemplate = [
     { $match: { username } },
@@ -120,7 +135,8 @@ const getEntity = async (event) => {
   const doc = await User.aggregate(agregateTemplate).exec();
   console.log(doc);
   await mongoose.connection.close();
-  // return getReturnValue(doc, pathSegments);
+  // return doc.forEach((entity) => console.log(entity['posts']));
+  // return getReturnValue(doc, url);
 };
 
 module.exports = {
