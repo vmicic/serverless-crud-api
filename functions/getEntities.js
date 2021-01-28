@@ -6,7 +6,25 @@ const {
   getSegmentsWithoutUsernameAndEnv,
 } = require('../util/urlUtils');
 
+const getReturnValue = (doc, pathSegments) => {
+  if (doc.length === 0) {
+    return [];
+  }
+
+  if (pathSegments.length % 2 === 0) {
+    return doc[0];
+  }
+
+  return doc[0][pathSegments.slice(-1).pop()];
+};
+
 const getQueryParams = (segments) => {
+  const segmentLengthOdd = segments.length % 2 === 1;
+  let lastSegment;
+  if (segmentLengthOdd) {
+    lastSegment = segments.pop();
+  }
+
   const queryTemplate = [];
   segments.forEach((segment, i) => {
     if (i % 2 === 1) {
@@ -38,7 +56,12 @@ const getQueryParams = (segments) => {
 
   // for queries with no nested entities
   if (queryTemplate.length === 0) {
-    queryTemplate.push({ $replaceRoot: { newRoot: '$environments.entities' } });
+    const matchCondition = {};
+    matchCondition[`environments.entities.${lastSegment}`] = { $exists: true };
+    queryTemplate.push({ $match: matchCondition });
+    queryTemplate.push({
+      $replaceRoot: { newRoot: '$environments.entities' },
+    });
   } else {
     queryTemplate.push({
       $replaceRoot: {
@@ -56,16 +79,12 @@ const getEntity = async (event) => {
     useUnifiedTopology: true,
   });
 
-  const { username, env } = getUsernameAndEnv(event.path);
-  const segments = getSegmentsWithoutUsernameAndEnv(event.path);
+  const url = new URL(event.path);
+  const { username, env } = getUsernameAndEnv(url.pathname);
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(url.pathname);
+  const searchParams = url.searchParams;
 
-  let lastSegment;
-  const segmentLengthOdd = segments.length % 2 === 1;
-  if (segmentLengthOdd) {
-    lastSegment = segments.pop();
-  }
-
-  const queryTemplate = getQueryParams(segments);
+  const queryTemplate = getQueryParams([...pathSegments]);
 
   const agregateTemplate = [
     { $match: { username } },
@@ -77,15 +96,7 @@ const getEntity = async (event) => {
   ].concat(queryTemplate);
   const doc = await User.aggregate(agregateTemplate).exec();
   await mongoose.connection.close();
-
-  if (doc.length === 0) {
-    return [];
-  }
-
-  if (segmentLengthOdd) {
-    return doc[0][lastSegment];
-  }
-  return doc[0];
+  return getReturnValue(doc, pathSegments);
 };
 
 module.exports = {
