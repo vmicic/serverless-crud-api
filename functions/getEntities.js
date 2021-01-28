@@ -6,27 +6,6 @@ const {
   getSegmentsWithoutUsernameAndEnv,
 } = require('../util/urlUtils');
 
-const getReturnValue = (doc, url) => {
-  const pathSegments = getSegmentsWithoutUsernameAndEnv(url.pathname);
-  const { searchParams } = url;
-
-  if (doc.length === 0) {
-    return [];
-  }
-
-  if (pathSegments.length % 2 === 0) {
-    return doc[0];
-  }
-
-  return doc[0][pathSegments.slice(-1).pop()];
-};
-
-// { $match: { 'environments.entities.posts': { $exists: true } } },
-// { $unwind: '$environments.entities.posts' },
-// { $match: { 'environments.entities.posts.content': 'great post' } },
-// { $match: { 'environments.entities.posts.rating': 5.0 } },
-// { $replaceRoot: { newRoot: '$environments.entities' } },
-
 const getSearchParamsQuery = (baseSelectorStr, searchParams) => {
   const queryPropTemplate = [];
   queryPropTemplate.push({
@@ -84,26 +63,19 @@ const getQueryParams = (segments, searchParams) => {
 
   // for queries with no nested entities
   if (queryTemplate.length === 0) {
-    const matchCondition = {};
     const entitySelector = `environments.entities.${lastSegment}`;
-    matchCondition[entitySelector] = { $exists: true };
-    queryTemplate.push({ $match: matchCondition });
 
     if (searchParams.keys().next().done === false) {
       queryTemplate = queryTemplate.concat(
         getSearchParamsQuery(entitySelector, searchParams),
       );
-      queryTemplate.push({
-        $replaceRoot: { newRoot: `$${entitySelector}` },
-      });
     } else {
-      queryTemplate.push(
-        { $unwind: `$${entitySelector}` },
-        {
-          $replaceRoot: { newRoot: `$${entitySelector}` },
-        },
-      );
+      queryTemplate.push({ $unwind: `$${entitySelector}` });
     }
+
+    queryTemplate.push({
+      $replaceRoot: { newRoot: `$${entitySelector}` },
+    });
   } else {
     const entitySelector = `${
       queryTemplate[queryTemplate.length - 2].$unwind
@@ -146,7 +118,6 @@ const getEntity = async (event) => {
   const { searchParams } = url;
 
   const queryTemplate = getQueryParams([...pathSegments], searchParams);
-  console.log(queryTemplate);
 
   const agregateTemplate = [
     { $match: { username } },
@@ -159,16 +130,8 @@ const getEntity = async (event) => {
   const doc = await User.aggregate(agregateTemplate).exec();
   await mongoose.connection.close();
   return doc;
-  // return doc.forEach((entity) => console.log(entity['posts']));
-  // return getReturnValue(doc, url);
 };
 
 module.exports = {
   getEntity,
 };
-
-// { $match: { 'environments.entities.posts': { $exists: true } } },
-// { $unwind: '$environments.entities.posts' },
-// { $match: { 'environments.entities.posts.content': 'great post' } },
-// { $match: { 'environments.entities.posts.rating': 5.0 } },
-// { $replaceRoot: { newRoot: '$environments.entities' } },
