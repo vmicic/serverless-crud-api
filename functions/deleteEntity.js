@@ -42,22 +42,43 @@ const deleteFieldTemplate = (env, pathSegments) => {
 };
 
 const deleteNestedEntitySearchParams = (env, pathSegments, searchParams) => {
-  const updateTemplate = {
-    $pull: {
-      'environments.$[envId].entities.$[entityId].users.$[usersId].friends': {
-        name: 'Rick',
-      },
-    },
-  };
-  const userId = mongoose.Types.ObjectId('601409ab6e6dc48af653a99a');
+  let pullSelector = 'environments.$[envId].entities.$[entityId]';
 
-  const optionsTemplate = {
-    arrayFilters: [
-      { 'envId.name': env },
-      { 'entityId.users': { $exists: true } },
-      { 'usersId._id': userId },
-    ],
+  const firstArrayFilterSelector = `entityId.${pathSegments[0]}`;
+  const firstArrayFilter = {};
+  firstArrayFilter[firstArrayFilterSelector] = { $exists: true };
+  const arrayFilters = [{ 'envId.name': env }, firstArrayFilter];
+
+  pathSegments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      pullSelector = `${pullSelector}.${segment}`;
+    }
+
+    if (i % 2 === 1) {
+      const id = mongoose.Types.ObjectId(segment);
+      const filter = {};
+      const filterSelector = `${pathSegments[i - 1]}Id._id`;
+      pullSelector = `${pullSelector}.$[${pathSegments[i - 1]}Id]`;
+      filter[filterSelector] = id;
+      arrayFilters.push(filter);
+    }
+  });
+
+  const pullObject = {};
+  pullObject[pullSelector] = {};
+
+  searchParams.forEach((value, key) => {
+    if (+value) {
+      pullObject[pullSelector][key] = +value;
+    } else {
+      pullObject[pullSelector][key] = value;
+    }
+  });
+
+  const updateTemplate = {
+    $pull: pullObject,
   };
+  const optionsTemplate = { arrayFilters };
 
   return { updateTemplate, optionsTemplate };
 };

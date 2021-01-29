@@ -1,5 +1,5 @@
 {
   "resource": "/",
-  "path": "localhost:3000/api/ghost/prod/users/dfasdf/friends?age=38",
+  "path": "localhost:3000/api/ghost/prod/users/601411a5b415b58ddd4bf6cd/friends/601411a5b415b58ddd4bf6cb/posts?content=hej",
   "httpMethod": "DELETE"
 }

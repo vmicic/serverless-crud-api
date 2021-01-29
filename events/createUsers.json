@@ -9,7 +9,12 @@
         "age": 38,
         "friends": [
           {
-            "name": "Tom"
+            "name": "Tom",
+            "posts": [
+              {
+                "content": "hej"
+              }
+            ]
           },
           {
             "name": "Rick"
