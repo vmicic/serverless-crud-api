@@ -1,0 +1,5 @@
+{
+  "resource": "/",
+  "path": "localhost:3000/api/ghost/prod/users",
+  "httpMethod": "DELETE"
+}

@@ -1,0 +1,17 @@
+{
+  "resource": "/",
+  "path": "api/ghost/prod",
+  "httpMethod": "PUT",
+  "body": {
+    "users": [
+      {
+        "name": "Jane",
+        "age": 38
+      },
+      {
+        "name": "Tom",
+        "age": 39
+      }
+    ]
+  }
+}
