@@ -89,6 +89,12 @@ functions:
       - httpApi:
           path: /{username}/{environent}/*
           method: PUT
+  deleteEntity:
+    handler: functions/deleteEntity.deleteEntity
+    events:
+      - httpApi:
+          path: /{username}/{environments}/*
+          method: DELETE
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details

@@ -1,0 +1,46 @@
+{
+  "resource": "/",
+  "path": "api/ghost/prod",
+  "httpMethod": "PUT",
+  "body": {
+    "users": [
+      {
+        "name": "Jane",
+        "age": 38,
+        "friends": [
+          {
+            "name": "Tom",
+            "posts": [
+              {
+                "content": "hej"
+              }
+            ]
+          },
+          {
+            "name": "Rick"
+          }
+        ]
+      },
+      {
+        "name": "Tom",
+        "age": 39
+      },
+      {
+        "name": "Mish",
+        "age": 30
+      },
+      {
+        "name": "Kirsh",
+        "age": 39
+      },
+      {
+        "name": "Kurozawa",
+        "age": 39
+      },
+      {
+        "name": "Pirsh",
+        "age": 52
+      }
+    ]
+  }
+}

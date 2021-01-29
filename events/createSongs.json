@@ -1,6 +1,6 @@
 {
   "resource": "/",
-  "path": "api/ghost/red",
+  "path": "api/ghost/dev",
   "httpMethod": "PUT",
   "body": {
     "songs": [
