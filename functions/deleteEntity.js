@@ -6,13 +6,20 @@ const {
   getSegmentsWithoutUsernameAndEnv,
 } = require('../util/urlUtils');
 
-const deleteFieldTemplate = (env, pathSegments) => {
-  let unsetSelector = 'environments.$[envId].entities.$[entityId]';
+const baseSelector = 'environments.$[envId].entities.$[entityId]';
 
-  const firstArrayFilterSelector = `entityId.${pathSegments[0]}`;
-  const firstArrayFilter = {};
-  firstArrayFilter[firstArrayFilterSelector] = { $exists: true };
-  const arrayFilters = [{ 'envId.name': env }, firstArrayFilter];
+const getFirstArrayFilters = (env, segment) => {
+  const filterSelector = `entityId.${segment}`;
+  const filter = {};
+  filter[filterSelector] = { $exists: true };
+  const arrayFilters = [{ 'envId.name': env }, filter];
+  return arrayFilters;
+};
+
+const deleteFieldTemplate = (env, pathSegments) => {
+  let unsetSelector = baseSelector;
+
+  const arrayFilters = getFirstArrayFilters(env, pathSegments[0]);
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
@@ -42,12 +49,9 @@ const deleteFieldTemplate = (env, pathSegments) => {
 };
 
 const deleteNestedEntitySearchParams = (env, pathSegments, searchParams) => {
-  let pullSelector = 'environments.$[envId].entities.$[entityId]';
+  let pullSelector = baseSelector;
 
-  const firstArrayFilterSelector = `entityId.${pathSegments[0]}`;
-  const firstArrayFilter = {};
-  firstArrayFilter[firstArrayFilterSelector] = { $exists: true };
-  const arrayFilters = [{ 'envId.name': env }, firstArrayFilter];
+  const arrayFilters = getFirstArrayFilters(env, pathSegments[0]);
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
@@ -99,8 +103,9 @@ const deleteEntityTemplate = (env, pathSegments) => {
 };
 
 const deleteEntityWithSearchParams = (env, pathSegments, searchParams) => {
-  const pullSelector = `environments.$[envId].entities.$[entityId].${pathSegments[0]}`;
+  const arrayFilters = getFirstArrayFilters(env, pathSegments[0]);
   const pullObject = {};
+  const pullSelector = `${baseSelector}.${pathSegments[0]}`;
   pullObject[pullSelector] = {};
   searchParams.forEach((value, key) => {
     if (+value) {
@@ -109,12 +114,6 @@ const deleteEntityWithSearchParams = (env, pathSegments, searchParams) => {
       pullObject[pullSelector][key] = value;
     }
   });
-
-  const arrayFilters = [{ 'envId.name': env }];
-  const filter = {};
-  const filterSelector = `entityId.${pathSegments[0]}`;
-  filter[filterSelector] = { $exists: true };
-  arrayFilters.push(filter);
 
   const updateTemplate = {
     $pull: pullObject,
@@ -127,12 +126,9 @@ const deleteEntityWithSearchParams = (env, pathSegments, searchParams) => {
 
 const deleteElementOfArrayTemplate = (env, pathSegments) => {
   const pullObject = {};
-  let pullSelector = 'environments.$[envId].entities.$[entityId]';
+  let pullSelector = baseSelector;
 
-  const firstArrayFilterSelector = `entityId.${pathSegments[0]}`;
-  const firstArrayFilter = {};
-  firstArrayFilter[firstArrayFilterSelector] = { $exists: true };
-  const arrayFilters = [{ 'envId.name': env }, firstArrayFilter];
+  const arrayFilters = getFirstArrayFilters(env, pathSegments[0]);
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
