@@ -1,5 +1,5 @@
 {
   "resource": "/",
-  "path": "localhost:3000/api/ghost/dev/posts/6013de2797a98f7efc18c9f7/comments",
+  "path": "localhost:3000/api/ghost/dev/songs",
   "httpMethod": "DELETE"
 }

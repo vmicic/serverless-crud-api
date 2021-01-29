@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { Environment } = require('../models/environment.js');
 const { User } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 const {
@@ -43,9 +44,24 @@ const deleteFieldTemplate = (env, pathSegments) => {
   };
 };
 
+const deleteEntityTemplate = (env, pathSegments) => {
+  const entityCondition = {};
+  entityCondition[pathSegments[0]] = { $exists: true };
+
+  const updateTemplate = {
+    $pull: { 'environments.$[envId].entities': entityCondition },
+  };
+
+  const optionsTemplate = {
+    arrayFilters: [{ 'envId.name': env }],
+  };
+
+  return { updateTemplate, optionsTemplate };
+};
+
 const getTemplates = (env, pathSegments) => {
   if (pathSegments.length === 1) {
-    // return deleteEntityTemplate();
+    return deleteEntityTemplate(env, pathSegments);
   }
 
   if (pathSegments.length % 2 === 1) {
