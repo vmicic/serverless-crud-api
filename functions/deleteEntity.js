@@ -41,6 +41,27 @@ const deleteFieldTemplate = (env, pathSegments) => {
   };
 };
 
+const deleteNestedEntitySearchParams = (env, pathSegments, searchParams) => {
+  const updateTemplate = {
+    $pull: {
+      'environments.$[envId].entities.$[entityId].users.$[usersId].friends': {
+        name: 'Rick',
+      },
+    },
+  };
+  const userId = mongoose.Types.ObjectId('601409ab6e6dc48af653a99a');
+
+  const optionsTemplate = {
+    arrayFilters: [
+      { 'envId.name': env },
+      { 'entityId.users': { $exists: true } },
+      { 'usersId._id': userId },
+    ],
+  };
+
+  return { updateTemplate, optionsTemplate };
+};
+
 const deleteEntityTemplate = (env, pathSegments) => {
   const entityCondition = {};
   entityCondition[pathSegments[0]] = { $exists: true };
@@ -126,6 +147,9 @@ const getTemplates = (env, pathSegments, searchParams) => {
   }
 
   if (pathSegments.length % 2 === 1) {
+    if (searchParams.keys().next().done === false) {
+      return deleteNestedEntitySearchParams(env, pathSegments, searchParams);
+    }
     return deleteFieldTemplate(env, pathSegments);
   }
 

@@ -6,7 +6,15 @@
     "users": [
       {
         "name": "Jane",
-        "age": 38
+        "age": 38,
+        "friends": [
+          {
+            "name": "Tom"
+          },
+          {
+            "name": "Rick"
+          }
+        ]
       },
       {
         "name": "Tom",
