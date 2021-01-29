@@ -6,6 +6,57 @@ const {
   getSegmentsWithoutUsernameAndEnv,
 } = require('../util/urlUtils');
 
+const deleteFieldTemplate = (env, pathSegments) => {
+  let unsetSelector =
+    'environments.$[envIdentifier].entities.$[entityIdentifier]';
+
+  const firstArrayFilterSelector = `entityIdentifier.${pathSegments[0]}`;
+  const firstArrayFilter = {};
+  firstArrayFilter[firstArrayFilterSelector] = { $exists: true };
+  const arrayFilters = [{ 'envIdentifier.name': env }, firstArrayFilter];
+
+  pathSegments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      unsetSelector = `${unsetSelector}.${segment}`;
+    }
+
+    if (i % 2 === 1) {
+      const id = mongoose.Types.ObjectId(segment);
+      const filter = {};
+      const idSelector = `${pathSegments[i - 1]}Identifier._id`;
+      unsetSelector = `${unsetSelector}.$[${pathSegments[i - 1]}Identifier]`;
+      filter[idSelector] = id;
+      arrayFilters.push(filter);
+    }
+  });
+
+  const unsetObject = {};
+  unsetObject[unsetSelector] = '';
+
+  const updateTemplate = { $unset: unsetObject };
+
+  const optionsTemplate = { arrayFilters };
+
+  return {
+    updateTemplate,
+    optionsTemplate,
+  };
+};
+
+const getTemplates = (env, pathSegments) => {
+  if (pathSegments.length === 1) {
+    // return deleteEntityTemplate();
+  }
+
+  if (pathSegments.length % 2 === 1) {
+    return deleteFieldTemplate(env, pathSegments);
+  }
+
+  if (pathSegments.length % 2 === 0) {
+    // return deleteElementOfArrayTemplate();
+  }
+};
+
 const deleteEntity = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
@@ -14,24 +65,12 @@ const deleteEntity = async (event) => {
 
   const url = new URL(event.path);
   const { username, env } = getUsernameAndEnv(url.pathname);
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(url.pathname);
 
   const query = {
     username,
   };
-
-  const updateTemplate = {
-    $unset: {
-      'environments.$[envIdentifier].entities.$[entityIdentifier].posts.$[postIdentifier].comments':
-        '',
-    },
-  };
-  const optionsTemplate = {
-    arrayFilters: [
-      { 'envIdentifier.name': 'dev' },
-      { 'entityIdentifier.posts': { $exists: true } },
-      { 'postIdentifier.comments': { $exists: true } },
-    ],
-  };
+  const { updateTemplate, optionsTemplate } = getTemplates(env, pathSegments);
 
   const result = await User.updateOne(query, updateTemplate, optionsTemplate);
   console.log(result);
