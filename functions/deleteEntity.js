@@ -56,6 +56,33 @@ const deleteEntityTemplate = (env, pathSegments) => {
   return { updateTemplate, optionsTemplate };
 };
 
+const deleteEntityWithSearchParams = (env, pathSegments, searchParams) => {
+  const pullSelector = `environments.$[envId].entities.$[entityId].${pathSegments[0]}`;
+  const pullObject = {};
+  pullObject[pullSelector] = {};
+  searchParams.forEach((value, key) => {
+    if (+value) {
+      pullObject[pullSelector][key] = +value;
+    } else {
+      pullObject[pullSelector][key] = value;
+    }
+  });
+
+  const arrayFilters = [{ 'envId.name': env }];
+  const filter = {};
+  const filterSelector = `entityId.${pathSegments[0]}`;
+  filter[filterSelector] = { $exists: true };
+  arrayFilters.push(filter);
+
+  const updateTemplate = {
+    $pull: pullObject,
+  };
+
+  const optionsTemplate = { arrayFilters };
+
+  return { updateTemplate, optionsTemplate };
+};
+
 const deleteElementOfArrayTemplate = (env, pathSegments) => {
   const pullObject = {};
   let pullSelector = 'environments.$[envId].entities.$[entityId]';
@@ -90,8 +117,11 @@ const deleteElementOfArrayTemplate = (env, pathSegments) => {
   return { updateTemplate, optionsTemplate };
 };
 
-const getTemplates = (env, pathSegments) => {
+const getTemplates = (env, pathSegments, searchParams) => {
   if (pathSegments.length === 1) {
+    if (searchParams.keys().next().done === false) {
+      return deleteEntityWithSearchParams(env, pathSegments, searchParams);
+    }
     return deleteEntityTemplate(env, pathSegments);
   }
 
@@ -111,11 +141,16 @@ const deleteEntity = async (event) => {
   const url = new URL(event.path);
   const { username, env } = getUsernameAndEnv(url.pathname);
   const pathSegments = getSegmentsWithoutUsernameAndEnv(url.pathname);
+  const { searchParams } = url;
 
   const query = {
     username,
   };
-  const { updateTemplate, optionsTemplate } = getTemplates(env, pathSegments);
+  const { updateTemplate, optionsTemplate } = getTemplates(
+    env,
+    pathSegments,
+    searchParams,
+  );
 
   await User.updateOne(query, updateTemplate, optionsTemplate);
   await mongoose.connection.close();
