@@ -1,17 +1,15 @@
 const mongoose = require('mongoose');
 const { Environment } = require('../models/environment.js');
 const { User } = require('../models/user.js');
-const { getUsername, getUsernameAndEnv } = require('../util/urlUtils.js');
 const { mongodbUri } = require('../url-config');
 
-const createEnv = async (event) => {
+const createEnv = async (event, context, callback) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
-
   const environmentName = event.body;
-  const username = getUsername(event.path);
+  const { username } = event.pathParameters;
 
   const environment = new Environment({
     name: environmentName,
@@ -29,20 +27,26 @@ const createEnv = async (event) => {
     { useFindAndModify: false },
   ).exec();
   await mongoose.connection.close();
+  callback(null, { statusCode: 201 });
 };
 
-const getEnv = async (event) => {
+const getEnv = async (event, context, callback) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
-  const { username, env } = getUsernameAndEnv(event.path);
+  const { username, environment } = event.pathParameters;
 
-  const query = { username, 'environments.name': env };
+  const query = { username, 'environments.name': environment };
   const doc = await User.findOne(query, 'environments.$').exec();
+
   await mongoose.connection.close();
-  return doc.environments[0].entities;
+  callback(null, {
+    statusCode: 200,
+    body: JSON.stringify(doc.environments[0].entities),
+    headers: { 'Content-Type': 'application/json' },
+  });
 };
 
 module.exports = {

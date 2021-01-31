@@ -10,6 +10,8 @@
 #    docs.serverless.com
 #
 # Happy Coding!
+plugins:
+  - serverless-offline
 
 service: fiverr-api
 # app and org for use with dashboard.serverless.com
@@ -63,31 +65,31 @@ functions:
     handler: functions/environments.createEnv
     events:
       - httpApi:
-          path: /{username}
+          path: /api/{username}
           method: PUT
   getEnv:
     handler: functions/environments.getEnv
     events:
       - httpApi:
-          path: /{username}/{environment}
+          path: /api/{username}/{environment}/{any+}
           method: GET
   createEntity:
     handler: functions/entities.createEntity
     events:
       - httpApi:
-          path: /{username}/{environment}
+          path: /api/{username}/{environment}
           method: PUT
   getEntity:
     handler: functions/getEntities.getEntity
     events:
       - httpApi:
-          path: /{username}/{environent}/{entity}/*
+          path: /api/{username}/{environent}/{entity}/*
           method: GET
   extendEntity:
     handler: functions/extendEntity.extendEntity
     events:
       - httpApi:
-          path: /{username}/{environent}/*
+          path: /api/{username}/{environent}/*
           method: PUT
   deleteEntity:
     handler: functions/deleteEntity.deleteEntity
