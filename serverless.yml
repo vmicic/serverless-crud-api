@@ -71,6 +71,12 @@ functions:
     handler: functions/environments.getEnv
     events:
       - httpApi:
+          path: /api/{username}/{environment}
+          method: GET
+  getEntity:
+    handler: functions/getEntities.getEntity
+    events:
+      - httpApi:
           path: /api/{username}/{environment}/{any+}
           method: GET
   createEntity:
@@ -79,12 +85,6 @@ functions:
       - httpApi:
           path: /api/{username}/{environment}
           method: PUT
-  getEntity:
-    handler: functions/getEntities.getEntity
-    events:
-      - httpApi:
-          path: /api/{username}/{environent}/{entity}/*
-          method: GET
   extendEntity:
     handler: functions/extendEntity.extendEntity
     events:

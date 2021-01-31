@@ -1,18 +1,16 @@
 const mongoose = require('mongoose');
 const { User } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
-const {
-  getUsernameAndEnv,
-  getSegmentsWithoutUsernameAndEnv,
-} = require('../util/urlUtils');
+const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 
-const getSearchParamsQuery = (baseSelectorStr, searchParams) => {
+const getSearchParamsQuery = (baseSelectorStr, queryStringParameters) => {
   const queryPropTemplate = [];
   queryPropTemplate.push({
     $unwind: `$${baseSelectorStr}`,
   });
 
-  searchParams.forEach((value, key) => {
+  Object.entries(queryStringParameters).forEach((entry) => {
+    const [key, value] = entry;
     const matchObject = {};
     if (+value) {
       matchObject[`${baseSelectorStr}.${key}`] = +value;
@@ -25,7 +23,7 @@ const getSearchParamsQuery = (baseSelectorStr, searchParams) => {
   return queryPropTemplate;
 };
 
-const getQueryParams = (segments, searchParams) => {
+const getQueryParams = (segments, queryStringParameters) => {
   const segmentLengthOdd = segments.length % 2 === 1;
   let lastSegment;
   if (segmentLengthOdd) {
@@ -65,9 +63,9 @@ const getQueryParams = (segments, searchParams) => {
   if (queryTemplate.length === 0) {
     const entitySelector = `environments.entities.${lastSegment}`;
 
-    if (searchParams.keys().next().done === false) {
+    if (queryStringParameters !== null) {
       queryTemplate = queryTemplate.concat(
-        getSearchParamsQuery(entitySelector, searchParams),
+        getSearchParamsQuery(entitySelector, queryStringParameters),
       );
     } else {
       queryTemplate.push({ $unwind: `$${entitySelector}` });
@@ -81,9 +79,9 @@ const getQueryParams = (segments, searchParams) => {
       queryTemplate[queryTemplate.length - 2].$unwind
     }.${lastSegment}`.substring(1);
 
-    if (searchParams.keys().next().done === false) {
+    if (queryStringParameters !== null) {
       queryTemplate = queryTemplate.concat(
-        getSearchParamsQuery(entitySelector, searchParams),
+        getSearchParamsQuery(entitySelector, queryStringParameters),
       );
     }
 
@@ -106,30 +104,37 @@ const getQueryParams = (segments, searchParams) => {
   return queryTemplate;
 };
 
-const getEntity = async (event) => {
+const getEntity = async (event, context, callback) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
-  const url = new URL(event.path);
-  const { username, env } = getUsernameAndEnv(url.pathname);
-  const pathSegments = getSegmentsWithoutUsernameAndEnv(url.pathname);
-  const { searchParams } = url;
+  const { username, environment } = event.pathParameters;
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
 
-  const queryTemplate = getQueryParams([...pathSegments], searchParams);
+  const { queryStringParameters } = event;
+
+  const queryTemplate = getQueryParams(
+    [...pathSegments],
+    queryStringParameters,
+  );
 
   const agregateTemplate = [
     { $match: { username } },
     {
       $unwind: '$environments',
     },
-    { $match: { 'environments.name': env } },
+    { $match: { 'environments.name': environment } },
     { $unwind: '$environments.entities' },
   ].concat(queryTemplate);
   const doc = await User.aggregate(agregateTemplate).exec();
   await mongoose.connection.close();
-  return doc;
+  callback(null, {
+    statusCode: 200,
+    body: JSON.stringify(doc),
+    headers: { 'Content-Type': 'application/json' },
+  });
 };
 
 module.exports = {
