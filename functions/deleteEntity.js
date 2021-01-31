@@ -194,8 +194,6 @@ const deleteEntity = async (event, context, callback) => {
     useUnifiedTopology: true,
   });
 
-  console.log(event);
-
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
@@ -208,9 +206,6 @@ const deleteEntity = async (event, context, callback) => {
     pathSegments,
     queryStringParameters,
   );
-
-  console.log(updateTemplate);
-  console.log(optionsTemplate);
 
   await User.updateOne(query, updateTemplate, optionsTemplate);
   await mongoose.connection.close();

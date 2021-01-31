@@ -22,29 +22,31 @@ const addIdForObjects = (content) => {
   }
 };
 
-const createEntity = async (event) => {
+const createEntity = async (event, context, callback) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
-  const { username, env } = getUsernameAndEnv(event.path);
-  const { body } = event;
-  const entityName = Object.keys(body)[0];
+  const { username, environment } = event.pathParameters;
+  const entity = JSON.parse(event.body);
+  const entityName = Object.keys(entity)[0];
 
-  addIdForObjects(body[entityName]);
+  addIdForObjects(entity[entityName]);
 
   const query = {
     username,
-    'environments.name': env,
+    'environments.name': environment,
+    'environments.entities.users': { $exists: false },
   };
 
   await User.findOneAndUpdate(
     query,
-    { $push: { 'environments.$.entities': body } },
+    { $push: { 'environments.$.entities': entity } },
     { useFindAndModify: false },
   ).exec();
   await mongoose.connection.close();
+  callback(null, { statusCode: 201 });
 };
 
 module.exports = {
