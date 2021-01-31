@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { User } = require('../models/user.js');
+const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 
@@ -206,7 +206,7 @@ const deleteEntity = async (event, context, callback) => {
     pathSegments,
     queryStringParameters,
   );
-
+  const User = getUserModel();
   await User.updateOne(query, updateTemplate, optionsTemplate);
   await mongoose.connection.close();
   callback(null, { statusCode: 200 });

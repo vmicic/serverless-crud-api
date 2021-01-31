@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
-const { User } = require('../models/user.js');
+const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
-const { getUsernameAndEnv } = require('../util/urlUtils');
 
 /* eslint-disable no-param-reassign */
 const addIdForObjects = (content) => {
@@ -37,9 +36,11 @@ const createEntity = async (event, context, callback) => {
   const query = {
     username,
     'environments.name': environment,
-    'environments.entities.users': { $exists: false },
   };
 
+  query[`environments.entities.${entityName}`] = { $exists: false };
+
+  const User = getUserModel();
   await User.findOneAndUpdate(
     query,
     { $push: { 'environments.$.entities': entity } },

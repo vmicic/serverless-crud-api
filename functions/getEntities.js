@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
-const { User } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
+const { getUserModel } = require('../models/user.js');
 
 const getSearchParamsQuery = (baseSelectorStr, queryStringParameters) => {
   const queryPropTemplate = [];
@@ -127,6 +127,8 @@ const getEntity = async (event, context, callback) => {
     { $match: { 'environments.name': environment } },
     { $unwind: '$environments.entities' },
   ].concat(queryTemplate);
+
+  const User = getUserModel();
   const doc = await User.aggregate(agregateTemplate).exec();
   await mongoose.connection.close();
   callback(null, {

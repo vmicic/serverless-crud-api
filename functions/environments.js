@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const { Environment } = require('../models/environment.js');
-const { User } = require('../models/user.js');
+const { getEnvironmentModel } = require('../models/environment.js');
+const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 
 const createEnv = async (event, context, callback) => {
@@ -11,6 +11,7 @@ const createEnv = async (event, context, callback) => {
   const environmentName = event.body;
   const { username } = event.pathParameters;
 
+  const Environment = getEnvironmentModel();
   const environment = new Environment({
     name: environmentName,
     entities: [],
@@ -39,6 +40,7 @@ const getEnv = async (event, context, callback) => {
   const { username, environment } = event.pathParameters;
 
   const query = { username, 'environments.name': environment };
+  const User = getUserModel();
   const doc = await User.findOne(query, 'environments.$').exec();
 
   await mongoose.connection.close();

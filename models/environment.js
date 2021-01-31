@@ -8,6 +8,14 @@ const environmentSchema = new mongoose.Schema(
   { strict: false },
 );
 
-const Environment = mongoose.model('Environment', environmentSchema);
+const getEnvironmentModel = () => {
+  let Environment;
+  try {
+    Environment = mongoose.model('environment');
+  } catch (error) {
+    Environment = mongoose.model('environment', environmentSchema);
+  }
+  return Environment;
+};
 
-module.exports = { environmentSchema, Environment };
+module.exports = { getEnvironmentModel, environmentSchema };
