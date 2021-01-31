@@ -112,7 +112,6 @@ const getEntity = async (event, context, callback) => {
 
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
-
   const { queryStringParameters } = event;
 
   const queryTemplate = getQueryParams(
