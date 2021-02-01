@@ -20,7 +20,7 @@ const addIdForObjects = (array) => {
   }
 };
 
-const getQueryParams = (environment, pathSegments, entities) => {
+const addToExistingEntity = (environment, pathSegments, entities) => {
   const ids = [];
   const filters = [];
   const pushObject = {};
@@ -61,6 +61,17 @@ const getQueryParams = (environment, pathSegments, entities) => {
   return { update, options };
 };
 
+const addFieldToEntity = (environment, pathSegments, entities) => {};
+
+const getQueryParams = (environment, pathSegments, entities) => {
+  if (pathSegments.length % 2 === 1) {
+    return addToExistingEntity(environment, pathSegments, entities);
+  }
+
+  console.log('Adding field');
+  return addFieldToEntity(environment, pathSegments, entities);
+};
+
 const extendEntity = async (event, context, callback) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
@@ -82,9 +93,6 @@ const extendEntity = async (event, context, callback) => {
     pathSegments,
     entities,
   );
-
-  console.log(update);
-  console.log(options);
 
   const User = getUserModel();
   await User.findOneAndUpdate(query, update, options).exec();

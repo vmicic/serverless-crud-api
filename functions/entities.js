@@ -24,7 +24,6 @@ const createEntity = async (event, context, callback) => {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
-
   const { username, environment } = event.pathParameters;
   const entity = JSON.parse(event.body);
   const entityName = Object.keys(entity)[0];
@@ -33,17 +32,26 @@ const createEntity = async (event, context, callback) => {
 
   const query = {
     username,
-    'environments.name': environment,
   };
 
-  query[`environments.entities.${entityName}`] = { $exists: false };
+  const setObject = {};
+  setObject[`environments.$[envId].${environment}.${entityName}`] =
+    entity[entityName];
+
+  const filter = {};
+  filter[`envId.${environment}`] = { $exists: true };
+
+  const arrayFilters = [];
+  arrayFilters.push(filter);
+
+  const update = { $set: setObject };
+  const options = {
+    arrayFilters,
+    useFindAndModify: false,
+  };
 
   const User = getUserModel();
-  await User.findOneAndUpdate(
-    query,
-    { $push: { 'environments.$.entities': entity } },
-    { useFindAndModify: false },
-  ).exec();
+  await User.findOneAndUpdate(query, update, options).exec();
   await mongoose.connection.close();
   callback(null, { statusCode: 201 });
 };

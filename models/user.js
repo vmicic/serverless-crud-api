@@ -1,10 +1,13 @@
 const mongoose = require('mongoose');
 const { environmentSchema } = require('./environment.js');
 
-const userSchema = new mongoose.Schema({
-  username: String,
-  environments: [environmentSchema],
-});
+const userSchema = new mongoose.Schema(
+  {
+    username: String,
+    environments: [],
+  },
+  { strict: false },
+);
 
 const getUserModel = () => {
   let User;

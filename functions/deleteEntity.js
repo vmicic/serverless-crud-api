@@ -36,13 +36,10 @@ const deleteFieldTemplate = (env, pathSegments) => {
   const unsetObject = {};
   unsetObject[unsetSelector] = '';
 
-  const updateTemplate = { $unset: unsetObject };
-  const optionsTemplate = { arrayFilters };
+  const update = { $unset: unsetObject };
+  const options = { arrayFilters };
 
-  return {
-    updateTemplate,
-    optionsTemplate,
-  };
+  return { update, options };
 };
 
 const deleteNestedEntitySearchParams = (
@@ -81,27 +78,27 @@ const deleteNestedEntitySearchParams = (
     }
   });
 
-  const updateTemplate = {
+  const update = {
     $pull: pullObject,
   };
-  const optionsTemplate = { arrayFilters };
+  const options = { arrayFilters };
 
-  return { updateTemplate, optionsTemplate };
+  return { update, options };
 };
 
 const deleteEntityTemplate = (env, pathSegments) => {
   const entityCondition = {};
   entityCondition[pathSegments[0]] = { $exists: true };
 
-  const updateTemplate = {
+  const update = {
     $pull: { 'environments.$[envId].entities': entityCondition },
   };
 
-  const optionsTemplate = {
+  const options = {
     arrayFilters: [{ 'envId.name': env }],
   };
 
-  return { updateTemplate, optionsTemplate };
+  return { update, options };
 };
 
 const deleteEntityWithSearchParams = (
@@ -123,12 +120,12 @@ const deleteEntityWithSearchParams = (
     }
   });
 
-  const updateTemplate = {
+  const update = {
     $pull: pullObject,
   };
-  const optionsTemplate = { arrayFilters };
+  const options = { arrayFilters };
 
-  return { updateTemplate, optionsTemplate };
+  return { update, options };
 };
 
 const deleteElementOfArrayTemplate = (env, pathSegments) => {
@@ -156,13 +153,13 @@ const deleteElementOfArrayTemplate = (env, pathSegments) => {
     }
   });
 
-  const updateTemplate = { $pull: pullObject };
-  const optionsTemplate = { arrayFilters };
+  const update = { $pull: pullObject };
+  const options = { arrayFilters };
 
-  return { updateTemplate, optionsTemplate };
+  return { update, options };
 };
 
-const getTemplates = (env, pathSegments, queryStringParameters) => {
+const getQueryParams = (env, pathSegments, queryStringParameters) => {
   if (pathSegments.length === 1) {
     if (queryStringParameters !== null) {
       return deleteEntityWithSearchParams(
@@ -201,13 +198,16 @@ const deleteEntity = async (event, context, callback) => {
   const query = {
     username,
   };
-  const { updateTemplate, optionsTemplate } = getTemplates(
+  const { update, options } = getQueryParams(
     environment,
     pathSegments,
     queryStringParameters,
   );
+  console.log(update);
+  console.log(options);
+
   const User = getUserModel();
-  await User.updateOne(query, updateTemplate, optionsTemplate);
+  await User.updateOne(query, update, options);
   await mongoose.connection.close();
   callback(null, { statusCode: 200 });
 };
