@@ -61,15 +61,13 @@ const addToExistingEntity = (environment, pathSegments, entities) => {
   return { update, options };
 };
 
-const addFieldToEntity = (environment, pathSegments, entities) => {};
-
 const getQueryParams = (environment, pathSegments, entities) => {
   if (pathSegments.length % 2 === 1) {
     return addToExistingEntity(environment, pathSegments, entities);
   }
 
-  console.log('Adding field');
-  return addFieldToEntity(environment, pathSegments, entities);
+  // console.log('Adding field');
+  // return addFieldToEntity(environment, pathSegments, entities);
 };
 
 const extendEntity = async (event, context, callback) => {

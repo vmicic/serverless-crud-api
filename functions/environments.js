@@ -1,8 +1,4 @@
 const mongoose = require('mongoose');
-const {
-  getEnvironmentModel,
-  environmentSchema,
-} = require('../models/environment.js');
 const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 

@@ -3,6 +3,7 @@ const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { getUserModel } = require('../models/user.js');
 
+/* eslint-disable no-underscore-dangle */
 const getProjectQuery = (array, params) => {
   const filterObject = {};
   filterObject.input = `$${array}`;
@@ -38,7 +39,7 @@ const findEntity = (entity, environment) => {
 
   const projectObj = {};
   projectObj[entity] = 1;
-  projectObj['_id'] = 0;
+  projectObj._id = 0;
 
   queryTemplate.push({
     $project: projectObj,
@@ -86,7 +87,7 @@ const findNestedEntities = (pathSegments, queryParams, environment) => {
     queryTemplate.push({ $replaceRoot: { newRoot: `$${selector}` } });
 
     const projectObj = {};
-    projectObj['_id'] = 0;
+    projectObj._id = 0;
     projectObj[lastSegment] = 1;
     queryTemplate.push({ $project: projectObj });
 
@@ -191,14 +192,8 @@ const getEntity = async (event, context, callback) => {
     },
   ].concat(queryTemplate);
 
-  console.log(agregateTemplate);
-
-  const userId = mongoose.Types.ObjectId('6017fefd9ffd87c0775e71fe');
-  const postId = mongoose.Types.ObjectId('6017fefd9ffd87c0775e71ff');
-
   const User = getUserModel();
   const doc = await User.aggregate(agregateTemplate).exec();
-  console.log(doc);
   await mongoose.connection.close();
   callback(null, {
     statusCode: 200,

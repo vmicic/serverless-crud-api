@@ -203,8 +203,6 @@ const deleteEntity = async (event, context, callback) => {
     pathSegments,
     queryStringParameters,
   );
-  console.log(update);
-  console.log(options);
 
   const User = getUserModel();
   await User.updateOne(query, update, options);
