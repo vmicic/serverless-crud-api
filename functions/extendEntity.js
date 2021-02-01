@@ -1,90 +1,96 @@
 const mongoose = require('mongoose');
-const { User } = require('../models/user.js');
+const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
-const {
-  getUsernameAndEnv,
-  getSegmentsWithoutUsernameAndEnv,
-} = require('../util/urlUtils');
+const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 
 /* eslint-disable no-param-reassign */
-const addIdForObjects = (content) => {
-  if (Array.isArray(content)) {
-    content.forEach((el) => {
-      addIdForObjects(el);
-    });
-  } else if (typeof content === 'object' && content !== null) {
-    Object.keys(content).forEach((el) => {
-      if (Array.isArray(content[el])) {
-        addIdForObjects(content[el]);
-      } else if (typeof content[el] === 'object' && content[el] !== null) {
-        addIdForObjects(content[el]);
+/* eslint-disable no-underscore-dangle */
+const addIdForObjects = (array) => {
+  if (Array.isArray(array)) {
+    array.forEach((element) => {
+      if (typeof element === 'object' && element !== null) {
+        element._id = mongoose.Types.ObjectId();
+        Object.keys(element).forEach((field) => {
+          if (Array.isArray(element[field])) {
+            addIdForObjects(element[field]);
+          }
+        });
       }
     });
-    // eslint-disable-next-line no-underscore-dangle
-    content._id = mongoose.Types.ObjectId();
   }
 };
 
-const extendEntity = async (event) => {
-  await mongoose.connect(mongodbUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const { username, env } = getUsernameAndEnv(event.path);
-  const segments = getSegmentsWithoutUsernameAndEnv(event.path);
-  const entitiesToAdd = event.body;
-
-  addIdForObjects(entitiesToAdd);
-
-  const query = {
-    username,
-  };
-
-  const identifiers = [];
-  const entityArrayFilters = [];
+const getQueryParams = (environment, pathSegments, entities) => {
+  const ids = [];
+  const filters = [];
   const pushObject = {};
-  const entityIdentifier = 'entityIdentifier';
-  let pushSelector = `environments.$[envIdentifier].entities.$[${entityIdentifier}]`;
-  segments.forEach((segment, i) => {
+  const entityId = 'entityId';
+  let pushSelector = `environments.$[envId].entities.$[${entityId}]`;
+  pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
-      if (i + 1 !== segments.length) {
-        const identifier = `${segment}Identifier`;
-        identifiers.push(identifier);
+      if (i + 1 !== pathSegments.length) {
+        const identifier = `${segment}Id`;
+        ids.push(identifier);
         pushSelector = `${pushSelector}.${segment}.$[${identifier}]`;
       } else {
         pushSelector = `${pushSelector}.${segment}`;
       }
     } else {
-      const entityArrayFilter = {};
-      const entityArrayFilterSelector = `${identifiers.slice(-1).pop()}._id`;
-      entityArrayFilter[entityArrayFilterSelector] = mongoose.Types.ObjectId(
-        segment,
-      );
-      entityArrayFilters.push(entityArrayFilter);
+      const filter = {};
+      const filterSelector = `${ids.slice(-1).pop()}._id`;
+      filter[filterSelector] = mongoose.Types.ObjectId(segment);
+      filters.push(filter);
     }
   });
 
-  pushObject[pushSelector] = { $each: entitiesToAdd };
+  pushObject[pushSelector] = { $each: entities };
 
-  const firstEntityFilter = {};
-  const firstEntityFilterSelector = `${entityIdentifier}.${segments[0]}`;
-  firstEntityFilter[firstEntityFilterSelector] = { $exists: true };
+  const update = {
+    $push: pushObject,
+  };
 
-  await User.findOneAndUpdate(
-    query,
-    {
-      $push: pushObject,
-    },
-    {
-      arrayFilters: [{ 'envIdentifier.name': env }, firstEntityFilter].concat(
-        entityArrayFilters,
-      ),
-      useFindAndModify: false,
-    },
-  ).exec();
+  const firstFilter = {};
+  const firstFilterSelector = `${entityId}.${pathSegments[0]}`;
+  firstFilter[firstFilterSelector] = { $exists: true };
+
+  const options = {
+    arrayFilters: [{ 'envId.name': environment }, firstFilter].concat(filters),
+    useFindAndModify: false,
+  };
+
+  return { update, options };
+};
+
+const extendEntity = async (event, context, callback) => {
+  await mongoose.connect(mongodbUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  const { username, environment } = event.pathParameters;
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+  const entities = JSON.parse(event.body);
+
+  addIdForObjects(entities);
+
+  const query = {
+    username,
+  };
+
+  const { update, options } = getQueryParams(
+    environment,
+    pathSegments,
+    entities,
+  );
+
+  console.log(update);
+  console.log(options);
+
+  const User = getUserModel();
+  await User.findOneAndUpdate(query, update, options).exec();
 
   await mongoose.connection.close();
+  callback(null, { statusCode: 201 });
 };
 
 module.exports = {

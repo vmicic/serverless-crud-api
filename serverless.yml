@@ -89,7 +89,7 @@ functions:
     handler: functions/extendEntity.extendEntity
     events:
       - httpApi:
-          path: /api/{username}/{environent}/*
+          path: /api/{username}/{environment}/{any+}
           method: PUT
   deleteEntity:
     handler: functions/deleteEntity.deleteEntity
