@@ -3,105 +3,169 @@ const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { getUserModel } = require('../models/user.js');
 
-const getSearchParamsQuery = (baseSelectorStr, queryStringParameters) => {
-  const queryPropTemplate = [];
-  queryPropTemplate.push({
-    $unwind: `$${baseSelectorStr}`,
-  });
+const getProjectQuery = (array, params) => {
+  const filterObject = {};
+  filterObject.input = `$${array}`;
+  filterObject.as = 'item';
+  const conditions = [];
 
-  Object.entries(queryStringParameters).forEach((entry) => {
+  Object.entries(params).forEach((entry) => {
     const [key, value] = entry;
-    const matchObject = {};
+    let condition = {};
     if (+value) {
-      matchObject[`${baseSelectorStr}.${key}`] = +value;
+      condition = { $eq: [`$$item.${key}`, +value] };
     } else {
-      matchObject[`${baseSelectorStr}.${key}`] = value;
+      condition = { $eq: [`$$item.${key}`, value] };
     }
-    queryPropTemplate.push({ $match: matchObject });
+    conditions.push(condition);
   });
+  filterObject.cond = { $and: conditions };
+  const projectObj = {};
+  projectObj[array] = { $filter: filterObject };
 
-  return queryPropTemplate;
+  return projectObj;
 };
 
-const getQueryParams = (segments, queryStringParameters) => {
-  const segmentLengthOdd = segments.length % 2 === 1;
-  let lastSegment;
-  if (segmentLengthOdd) {
-    lastSegment = segments.pop();
-  }
+const findEntity = (entity, environment) => {
+  const queryTemplate = [];
+  const matchObj = {};
+  matchObj[`environments.${environment}`] = { $exists: true };
+  queryTemplate.push({ $match: matchObj });
 
-  let queryTemplate = [];
-  segments.forEach((segment, i) => {
-    if (i % 2 === 1) {
-      const entityId = mongoose.Types.ObjectId(segment);
-      const matchCondition = {};
-      if (queryTemplate.length === 0) {
-        queryTemplate.push({
-          $unwind: `$environments.entities.${segments[i - 1]}`,
-        });
+  queryTemplate.push({
+    $replaceRoot: { newRoot: `$environments.${environment}` },
+  });
 
-        matchCondition[
-          `environments.entities.${segments[i - 1]}._id`
-        ] = entityId;
-        queryTemplate.push({ $match: matchCondition });
-      } else {
-        queryTemplate.push({
-          $unwind: `${queryTemplate[queryTemplate.length - 2].$unwind}.${
-            segments[i - 1]
-          }`,
-        });
+  const projectObj = {};
+  projectObj[entity] = 1;
+  projectObj['_id'] = 0;
 
-        matchCondition[
-          `${queryTemplate[queryTemplate.length - 1].$unwind.substring(1)}._id`
-        ] = entityId;
-        queryTemplate.push({ $match: matchCondition });
+  queryTemplate.push({
+    $project: projectObj,
+  });
+
+  return queryTemplate;
+};
+
+const findEntityByQueryParams = (entity, queryParams, environment) => {
+  const queryTemplate = [];
+  const matchObject = {};
+  const environmentSelector = `environments.${environment}`;
+  matchObject[environmentSelector] = { $exists: true };
+  queryTemplate.push({ $match: matchObject });
+
+  const selector = `environments.${environment}.${entity}`;
+
+  queryTemplate.push({ $project: getProjectQuery(selector, queryParams) });
+  queryTemplate.push({ $replaceRoot: { newRoot: `$${environmentSelector}` } });
+
+  return queryTemplate;
+};
+
+const findNestedEntities = (pathSegments, queryParams, environment) => {
+  const queryTemplate = [];
+  let selector = `environments.${environment}`;
+  pathSegments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      if (i + 1 !== pathSegments.length) {
+        selector = `${selector}.${segment}`;
+        queryTemplate.push({ $unwind: `$${selector}` });
       }
+      // if at id segment
+    } else if (i % 2 === 1) {
+      const matchObj = {};
+      matchObj[`${selector}._id`] = mongoose.Types.ObjectId(segment);
+      queryTemplate.push({ $match: matchObj });
+      queryTemplate.push();
     }
   });
 
-  // for queries with no nested entities
-  if (queryTemplate.length === 0) {
-    const entitySelector = `environments.entities.${lastSegment}`;
+  const lastSegment = pathSegments.slice(-1).pop();
 
-    if (queryStringParameters !== null) {
-      queryTemplate = queryTemplate.concat(
-        getSearchParamsQuery(entitySelector, queryStringParameters),
-      );
-    } else {
-      queryTemplate.push({ $unwind: `$${entitySelector}` });
-    }
+  if (queryParams === null) {
+    queryTemplate.push({ $replaceRoot: { newRoot: `$${selector}` } });
 
-    queryTemplate.push({
-      $replaceRoot: { newRoot: `$${entitySelector}` },
-    });
-  } else {
-    const entitySelector = `${
-      queryTemplate[queryTemplate.length - 2].$unwind
-    }.${lastSegment}`.substring(1);
+    const projectObj = {};
+    projectObj['_id'] = 0;
+    projectObj[lastSegment] = 1;
+    queryTemplate.push({ $project: projectObj });
 
-    if (queryStringParameters !== null) {
-      queryTemplate = queryTemplate.concat(
-        getSearchParamsQuery(entitySelector, queryStringParameters),
-      );
-    }
-
-    if (segmentLengthOdd) {
-      queryTemplate.push(
-        { $unwind: `$${entitySelector}` },
-        {
-          $replaceRoot: { newRoot: `$${entitySelector}` },
-        },
-      );
-    } else {
-      queryTemplate.push({
-        $replaceRoot: {
-          newRoot: `${queryTemplate[queryTemplate.length - 2].$unwind}`,
-        },
-      });
-    }
+    return queryTemplate;
   }
 
+  queryTemplate.push({
+    $project: getProjectQuery(`${selector}.${lastSegment}`, queryParams),
+  });
+  queryTemplate.push({ $replaceRoot: { newRoot: `$${selector}` } });
+
   return queryTemplate;
+};
+
+const findEntityById = (pathSegments, environment) => {
+  const queryTemplate = [];
+  const matchObject = {};
+  const environmentSelector = `environments.${environment}`;
+  matchObject[environmentSelector] = { $exists: true };
+  queryTemplate.push({ $match: matchObject });
+
+  let selector = `environments.${environment}.${pathSegments[0]}`;
+
+  if (pathSegments.length === 2) {
+    const itemId = mongoose.Types.ObjectId(pathSegments[1]);
+    const queryParams = { _id: itemId };
+
+    queryTemplate.push({ $project: getProjectQuery(selector, queryParams) });
+    queryTemplate.push({
+      $replaceRoot: { newRoot: `$${environmentSelector}` },
+    });
+    return queryTemplate;
+  }
+  pathSegments.forEach((segment, i) => {
+    if (i === 0) {
+      queryTemplate.push({ $unwind: `$${selector}` });
+      // if at id segment
+    } else if (i % 2 === 1) {
+      if (i + 1 !== pathSegments.length) {
+        const matchObj = {};
+        matchObj[`${selector}._id`] = mongoose.Types.ObjectId(segment);
+        queryTemplate.push({ $match: matchObj });
+        queryTemplate.push();
+      }
+    } else if (i + 2 !== pathSegments.length) {
+      selector = `${selector}.${segment}`;
+      queryTemplate.push({ $unwind: `$${selector}` });
+    } else {
+      selector = `${selector}.${segment}`;
+    }
+  });
+
+  const itemId = mongoose.Types.ObjectId(pathSegments.slice(-1).pop());
+  const queryParams = { _id: itemId };
+
+  queryTemplate.push({ $project: getProjectQuery(selector, queryParams) });
+  queryTemplate.push({
+    $replaceRoot: { newRoot: queryTemplate[queryTemplate.length - 3].$unwind },
+  });
+
+  return queryTemplate;
+};
+
+const getQueryParams = (pathSegments, queryStringParameters, environment) => {
+  if (pathSegments.length === 1) {
+    if (queryStringParameters !== null) {
+      return findEntityByQueryParams(
+        pathSegments.pop(),
+        queryStringParameters,
+        environment,
+      );
+    }
+    return findEntity(pathSegments.pop(), environment);
+  }
+  if (pathSegments.length % 2 === 0) {
+    return findEntityById(pathSegments, environment);
+  }
+
+  return findNestedEntities(pathSegments, queryStringParameters, environment);
 };
 
 const getEntity = async (event, context, callback) => {
@@ -117,6 +181,7 @@ const getEntity = async (event, context, callback) => {
   const queryTemplate = getQueryParams(
     [...pathSegments],
     queryStringParameters,
+    environment,
   );
 
   const agregateTemplate = [
@@ -124,16 +189,20 @@ const getEntity = async (event, context, callback) => {
     {
       $unwind: '$environments',
     },
-    { $match: { 'environments.name': environment } },
-    { $unwind: '$environments.entities' },
   ].concat(queryTemplate);
+
+  console.log(agregateTemplate);
+
+  const userId = mongoose.Types.ObjectId('6017fefd9ffd87c0775e71fe');
+  const postId = mongoose.Types.ObjectId('6017fefd9ffd87c0775e71ff');
 
   const User = getUserModel();
   const doc = await User.aggregate(agregateTemplate).exec();
+  console.log(doc);
   await mongoose.connection.close();
   callback(null, {
     statusCode: 200,
-    body: JSON.stringify(doc),
+    body: JSON.stringify(doc[0]),
     headers: { 'Content-Type': 'application/json' },
   });
 };
