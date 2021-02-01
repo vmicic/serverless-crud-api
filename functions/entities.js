@@ -3,21 +3,19 @@ const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 
 /* eslint-disable no-param-reassign */
-const addIdForObjects = (content) => {
-  if (Array.isArray(content)) {
-    content.forEach((el) => {
-      addIdForObjects(el);
-    });
-  } else if (typeof content === 'object' && content !== null) {
-    Object.keys(content).forEach((el) => {
-      if (Array.isArray(content[el])) {
-        addIdForObjects(content[el]);
-      } else if (typeof content[el] === 'object' && content[el] !== null) {
-        addIdForObjects(content[el]);
+/* eslint-disable no-underscore-dangle */
+const addIdForObjects = (array) => {
+  if (Array.isArray(array)) {
+    array.forEach((element) => {
+      if (typeof element === 'object' && element !== null) {
+        element._id = mongoose.Types.ObjectId();
+        Object.keys(element).forEach((field) => {
+          if (Array.isArray(element[field])) {
+            addIdForObjects(element[field]);
+          }
+        });
       }
     });
-    // eslint-disable-next-line no-underscore-dangle
-    content._id = mongoose.Types.ObjectId();
   }
 };
 
