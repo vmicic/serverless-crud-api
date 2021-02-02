@@ -20,54 +20,75 @@ const addIdForObjects = (array) => {
   }
 };
 
-const addToExistingEntity = (environment, pathSegments, entities) => {
-  const ids = [];
+const getFirstFilter = (env) => {
+  const filter = {};
+  const filterSelector = `envId.${env}`;
+  filter[filterSelector] = { $exists: true };
+  return filter;
+};
+
+const getSelectorAndFilters = (pathSegments, selector) => {
   const filters = [];
-  const pushObject = {};
-  const entityId = 'entityId';
-  let pushSelector = `environments.$[envId].entities.$[${entityId}]`;
+
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
-      if (i + 1 !== pathSegments.length) {
-        const identifier = `${segment}Id`;
-        ids.push(identifier);
-        pushSelector = `${pushSelector}.${segment}.$[${identifier}]`;
-      } else {
-        pushSelector = `${pushSelector}.${segment}`;
-      }
-    } else {
+      selector = `${selector}.${segment}`;
+    }
+
+    if (i % 2 === 1) {
       const filter = {};
-      const filterSelector = `${ids.slice(-1).pop()}._id`;
+      const filterSelector = `${pathSegments[i - 1]}Id._id`;
       filter[filterSelector] = mongoose.Types.ObjectId(segment);
       filters.push(filter);
+
+      selector = `${selector}.$[${pathSegments[i - 1]}Id]`;
     }
   });
 
-  pushObject[pushSelector] = { $each: entities };
+  return { selector, filters };
+};
 
-  const update = {
-    $push: pushObject,
-  };
+const addToExistingEntity = (env, pathSegments, entities) => {
+  let arrayFilters = [getFirstFilter(env)];
 
-  const firstFilter = {};
-  const firstFilterSelector = `${entityId}.${pathSegments[0]}`;
-  firstFilter[firstFilterSelector] = { $exists: true };
+  const { selector, filters } = getSelectorAndFilters(
+    pathSegments,
+    `environments.$[envId].${env}`,
+  );
 
-  const options = {
-    arrayFilters: [{ 'envId.name': environment }, firstFilter].concat(filters),
-    useFindAndModify: false,
-  };
+  arrayFilters = arrayFilters.concat(filters);
 
+  const push = {};
+  push[selector] = { $each: entities };
+
+  const update = { $push: push };
+  const options = { arrayFilters, useFindAndModify: false };
   return { update, options };
 };
 
-const getQueryParams = (environment, pathSegments, entities) => {
+const replaceEntity = (env, pathSegments, bodyPayload) => {
+  let arrayFilters = [getFirstFilter(env)];
+
+  const { selector, filters } = getSelectorAndFilters(
+    pathSegments,
+    `environments.$[envId].${env}`,
+  );
+  arrayFilters = arrayFilters.concat(filters);
+
+  const set = {};
+  set[selector] = bodyPayload;
+
+  const update = { $set: set };
+  const options = { arrayFilters, useFindAndModify: false };
+  return { update, options };
+};
+
+const getQueryParams = (environment, pathSegments, bodyPayload) => {
   if (pathSegments.length % 2 === 1) {
-    return addToExistingEntity(environment, pathSegments, entities);
+    return addToExistingEntity(environment, pathSegments, bodyPayload);
   }
 
-  // console.log('Adding field');
-  // return addFieldToEntity(environment, pathSegments, entities);
+  return replaceEntity(environment, pathSegments, bodyPayload);
 };
 
 const extendEntity = async (event, context, callback) => {
@@ -78,9 +99,17 @@ const extendEntity = async (event, context, callback) => {
 
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
-  const entities = JSON.parse(event.body);
+  const bodyPayload = JSON.parse(event.body);
 
-  addIdForObjects(entities);
+  if (pathSegments.length % 2 === 1) {
+    addIdForObjects(bodyPayload);
+  } else {
+    console.log(bodyPayload);
+    bodyPayload._id = mongoose.Types.ObjectId();
+    console.log('Added if for one object');
+  }
+
+  addIdForObjects(bodyPayload);
 
   const query = {
     username,
@@ -89,7 +118,7 @@ const extendEntity = async (event, context, callback) => {
   const { update, options } = getQueryParams(
     environment,
     pathSegments,
-    entities,
+    bodyPayload,
   );
 
   const User = getUserModel();

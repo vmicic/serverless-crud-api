@@ -35,6 +35,7 @@ const createEntity = async (event, context, callback) => {
   };
 
   const setObject = {};
+  // eslint-disable-next-line operator-linebreak
   setObject[`environments.$[envId].${environment}.${entityName}`] =
     entity[entityName];
 
