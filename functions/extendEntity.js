@@ -131,4 +131,5 @@ const extendEntity = async (event, context, callback) => {
 
 module.exports = {
   extendEntity,
+  getSelectorAndFilters,
 };

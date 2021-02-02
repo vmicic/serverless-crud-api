@@ -174,7 +174,6 @@ const getEntity = async (event, context, callback) => {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
-
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
