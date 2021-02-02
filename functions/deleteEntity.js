@@ -10,29 +10,39 @@ const getFirstFilter = (env) => {
   return filter;
 };
 
-const deleteFieldTemplate = (env, pathSegments) => {
-  let unsetSelector = `environments.$[envId].${env}`;
-
-  const firstFilter = getFirstFilter(env);
-  const arrayFilters = [firstFilter];
+const getSelectorAndFilters = (pathSegments, startSelector) => {
+  const filters = [];
+  let selector = startSelector;
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
-      unsetSelector = `${unsetSelector}.${segment}`;
+      selector = `${selector}.${segment}`;
     }
 
     if (i % 2 === 1) {
-      const id = mongoose.Types.ObjectId(segment);
       const filter = {};
-      const idSelector = `${pathSegments[i - 1]}Id._id`;
-      unsetSelector = `${unsetSelector}.$[${pathSegments[i - 1]}Id]`;
-      filter[idSelector] = id;
-      arrayFilters.push(filter);
+      const filterSelector = `${pathSegments[i - 1]}Id._id`;
+      filter[filterSelector] = mongoose.Types.ObjectId(segment);
+      filters.push(filter);
+
+      selector = `${selector}.$[${pathSegments[i - 1]}Id]`;
     }
   });
 
+  return { selector, filters };
+};
+
+const deleteFieldTemplate = (env, pathSegments) => {
+  let arrayFilters = [getFirstFilter(env)];
+
+  const { selector, filters } = getSelectorAndFilters(
+    pathSegments,
+    `environments.$[envId].${env}`,
+  );
+  arrayFilters = arrayFilters.concat(filters);
+
   const unset = {};
-  unset[unsetSelector] = '';
+  unset[selector] = '';
 
   const update = { $unset: unset };
   const options = { arrayFilters };
@@ -41,39 +51,27 @@ const deleteFieldTemplate = (env, pathSegments) => {
 };
 
 const deleteNestedFieldQueryParams = (env, pathSegments, queryParams) => {
-  let pullSelector = `environments.$[envId].${env}`;
+  let arrayFilters = [getFirstFilter(env)];
 
-  const firstFilter = getFirstFilter(env);
-  const arrayFilters = [firstFilter];
+  const { selector, filters } = getSelectorAndFilters(
+    pathSegments,
+    `environments.$[envId].${env}`,
+  );
+  arrayFilters = arrayFilters.concat(filters);
 
-  pathSegments.forEach((segment, i) => {
-    if (i % 2 === 0) {
-      pullSelector = `${pullSelector}.${segment}`;
-    }
-
-    if (i % 2 === 1) {
-      const id = mongoose.Types.ObjectId(segment);
-      const filter = {};
-      const filterSelector = `${pathSegments[i - 1]}Id._id`;
-      pullSelector = `${pullSelector}.$[${pathSegments[i - 1]}Id]`;
-      filter[filterSelector] = id;
-      arrayFilters.push(filter);
-    }
-  });
-
-  const pullObject = {};
-  pullObject[pullSelector] = {};
+  const pull = {};
+  pull[selector] = {};
 
   Object.entries(queryParams).forEach((entry) => {
     const [key, value] = entry;
     if (+value) {
-      pullObject[pullSelector][key] = +value;
+      pull[selector][key] = +value;
     } else {
-      pullObject[pullSelector][key] = value;
+      pull[selector][key] = value;
     }
   });
 
-  const update = { $pull: pullObject };
+  const update = { $pull: pull };
   const options = { arrayFilters };
 
   return { update, options };

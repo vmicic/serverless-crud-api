@@ -27,8 +27,9 @@ const getFirstFilter = (env) => {
   return filter;
 };
 
-const getSelectorAndFilters = (pathSegments, selector) => {
+const getSelectorAndFilters = (pathSegments, startSelector) => {
   const filters = [];
+  let selector = startSelector;
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
