@@ -5,18 +5,17 @@ const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 
 const baseSelector = 'environments.$[envId].entities.$[entityId]';
 
-const getFirstArrayFilters = (env, segment) => {
-  const filterSelector = `entityId.${segment}`;
+const getFirstFilter = (env) => {
   const filter = {};
+  const filterSelector = `envId.${env}`;
   filter[filterSelector] = { $exists: true };
-  const arrayFilters = [{ 'envId.name': env }, filter];
-  return arrayFilters;
+  return filter;
 };
 
 const deleteFieldTemplate = (env, pathSegments) => {
   let unsetSelector = baseSelector;
 
-  const arrayFilters = getFirstArrayFilters(env, pathSegments[0]);
+  const arrayFilters = getFirstFilter(env, pathSegments[0]);
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
@@ -42,14 +41,10 @@ const deleteFieldTemplate = (env, pathSegments) => {
   return { update, options };
 };
 
-const deleteNestedEntitySearchParams = (
-  env,
-  pathSegments,
-  queryStringParameters,
-) => {
+const deleteNestedEntitySearchParams = (env, pathSegments, queryParams) => {
   let pullSelector = baseSelector;
 
-  const arrayFilters = getFirstArrayFilters(env, pathSegments[0]);
+  const arrayFilters = getFirstFilter(env, pathSegments[0]);
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
@@ -69,7 +64,7 @@ const deleteNestedEntitySearchParams = (
   const pullObject = {};
   pullObject[pullSelector] = {};
 
-  Object.entries(queryStringParameters).forEach((entry) => {
+  Object.entries(queryParams).forEach((entry) => {
     const [key, value] = entry;
     if (+value) {
       pullObject[pullSelector][key] = +value;
@@ -97,9 +92,7 @@ const deleteEntityTemplate = (env, entity) => {
     $unset: unset,
   };
 
-  const filter = {};
-  const filterSelector = `envId.${env}`;
-  filter[filterSelector] = { $exists: true };
+  const filter = getFirstFilter(env);
 
   const options = {
     arrayFilters: [filter],
@@ -108,28 +101,30 @@ const deleteEntityTemplate = (env, entity) => {
   return { update, options };
 };
 
-const deleteEntityWithSearchParams = (
-  env,
-  pathSegments,
-  queryStringParameters,
-) => {
-  const arrayFilters = getFirstArrayFilters(env, pathSegments[0]);
-  const pullObject = {};
-  const pullSelector = `${baseSelector}.${pathSegments[0]}`;
-  pullObject[pullSelector] = {};
+// { $pull: { 'environments.$[envId].dev.users': { name: 'Tom' } } },
+// { arrayFilters: [{ 'envId.dev': { $exists: true } }] },
 
-  Object.entries(queryStringParameters).forEach((entry) => {
+const deleteEntityWithSearchParams = (env, entity, queryParams) => {
+  const filter = getFirstFilter(env);
+
+  const pull = {};
+  const pullSelector = `environments.$[envId].${env}.${entity}`;
+  pull[pullSelector] = {};
+
+  Object.entries(queryParams).forEach((entry) => {
     const [key, value] = entry;
     if (+value) {
-      pullObject[pullSelector][key] = +value;
+      pull[pullSelector][key] = +value;
     } else {
-      pullObject[pullSelector][key] = value;
+      pull[pullSelector][key] = value;
     }
   });
 
   const update = {
-    $pull: pullObject,
+    $pull: pull,
   };
+
+  const arrayFilters = [filter];
   const options = { arrayFilters };
 
   return { update, options };
@@ -139,7 +134,7 @@ const deleteElementOfArrayTemplate = (env, pathSegments) => {
   const pullObject = {};
   let pullSelector = baseSelector;
 
-  const arrayFilters = getFirstArrayFilters(env, pathSegments[0]);
+  const arrayFilters = getFirstFilter(env, pathSegments[0]);
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
@@ -166,25 +161,17 @@ const deleteElementOfArrayTemplate = (env, pathSegments) => {
   return { update, options };
 };
 
-const getQueryParams = (env, pathSegments, queryStringParameters) => {
+const getQueryParams = (env, pathSegments, queryParams) => {
   if (pathSegments.length === 1) {
-    if (queryStringParameters !== null) {
-      return deleteEntityWithSearchParams(
-        env,
-        pathSegments,
-        queryStringParameters,
-      );
+    if (queryParams !== null) {
+      return deleteEntityWithSearchParams(env, pathSegments[0], queryParams);
     }
-    return deleteEntityTemplate(env, pathSegments);
+    return deleteEntityTemplate(env, pathSegments[0]);
   }
 
   if (pathSegments.length % 2 === 1) {
-    if (queryStringParameters !== null) {
-      return deleteNestedEntitySearchParams(
-        env,
-        pathSegments,
-        queryStringParameters,
-      );
+    if (queryParams !== null) {
+      return deleteNestedEntitySearchParams(env, pathSegments, queryParams);
     }
     return deleteFieldTemplate(env, pathSegments);
   }
