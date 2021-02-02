@@ -3,8 +3,6 @@ const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 
-const baseSelector = 'environments.$[envId].entities.$[entityId]';
-
 const getFirstFilter = (env) => {
   const filter = {};
   const filterSelector = `envId.${env}`;
@@ -33,10 +31,10 @@ const deleteFieldTemplate = (env, pathSegments) => {
     }
   });
 
-  const unsetObject = {};
-  unsetObject[unsetSelector] = '';
+  const unset = {};
+  unset[unsetSelector] = '';
 
-  const update = { $unset: unsetObject };
+  const update = { $unset: unset };
   const options = { arrayFilters };
 
   return { update, options };
@@ -75,9 +73,7 @@ const deleteNestedFieldQueryParams = (env, pathSegments, queryParams) => {
     }
   });
 
-  const update = {
-    $pull: pullObject,
-  };
+  const update = { $pull: pullObject };
   const options = { arrayFilters };
 
   return { update, options };
@@ -127,7 +123,7 @@ const deleteEntityWithSearchParams = (env, entity, queryParams) => {
 };
 
 const deleteElementOfArrayTemplate = (env, pathSegments) => {
-  const pullObject = {};
+  const pull = {};
   let pullSelector = `environments.$[envId].${env}`;
 
   const firstFilter = getFirstFilter(env);
@@ -141,7 +137,7 @@ const deleteElementOfArrayTemplate = (env, pathSegments) => {
     if (i % 2 === 1) {
       const id = mongoose.Types.ObjectId(segment);
       if (i + 1 === pathSegments.length) {
-        pullObject[pullSelector] = { _id: id };
+        pull[pullSelector] = { _id: id };
       } else {
         const filter = {};
         const idSelector = `${pathSegments[i - 1]}Id._id`;
@@ -152,7 +148,7 @@ const deleteElementOfArrayTemplate = (env, pathSegments) => {
     }
   });
 
-  const update = { $pull: pullObject };
+  const update = { $pull: pull };
   const options = { arrayFilters };
 
   return { update, options };
@@ -186,8 +182,6 @@ const deleteEntity = async (event, context, callback) => {
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
 
-  const userId = mongoose.Types.ObjectId('601908eb145ca1d3052c7d83');
-
   const query = {
     username,
   };
@@ -196,9 +190,6 @@ const deleteEntity = async (event, context, callback) => {
     pathSegments,
     queryStringParameters,
   );
-
-  console.log(update);
-  console.log(options);
 
   const User = getUserModel();
   await User.updateOne(query, update, options);
