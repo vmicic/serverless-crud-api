@@ -13,9 +13,10 @@ const getFirstFilter = (env) => {
 };
 
 const deleteFieldTemplate = (env, pathSegments) => {
-  let unsetSelector = baseSelector;
+  let unsetSelector = `environments.$[envId].${env}`;
 
-  const arrayFilters = getFirstFilter(env, pathSegments[0]);
+  const firstFilter = getFirstFilter(env);
+  const arrayFilters = [firstFilter];
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
@@ -41,10 +42,11 @@ const deleteFieldTemplate = (env, pathSegments) => {
   return { update, options };
 };
 
-const deleteNestedEntitySearchParams = (env, pathSegments, queryParams) => {
-  let pullSelector = baseSelector;
+const deleteNestedFieldQueryParams = (env, pathSegments, queryParams) => {
+  let pullSelector = `environments.$[envId].${env}`;
 
-  const arrayFilters = getFirstFilter(env, pathSegments[0]);
+  const firstFilter = getFirstFilter(env);
+  const arrayFilters = [firstFilter];
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
@@ -166,7 +168,7 @@ const getQueryParams = (env, pathSegments, queryParams) => {
 
   if (pathSegments.length % 2 === 1) {
     if (queryParams !== null) {
-      return deleteNestedEntitySearchParams(env, pathSegments, queryParams);
+      return deleteNestedFieldQueryParams(env, pathSegments, queryParams);
     }
     return deleteFieldTemplate(env, pathSegments);
   }
