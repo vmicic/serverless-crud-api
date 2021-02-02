@@ -187,9 +187,7 @@ const getEntity = async (event, context, callback) => {
 
   const agregateTemplate = [
     { $match: { username } },
-    {
-      $unwind: '$environments',
-    },
+    { $unwind: '$environments' },
   ].concat(queryTemplate);
 
   const User = getUserModel();

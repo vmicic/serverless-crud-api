@@ -2,34 +2,13 @@ const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
+const { getSelectorAndFilters } = require('./extendEntity');
 
 const getFirstFilter = (env) => {
   const filter = {};
   const filterSelector = `envId.${env}`;
   filter[filterSelector] = { $exists: true };
   return filter;
-};
-
-const getSelectorAndFilters = (pathSegments, startSelector) => {
-  const filters = [];
-  let selector = startSelector;
-
-  pathSegments.forEach((segment, i) => {
-    if (i % 2 === 0) {
-      selector = `${selector}.${segment}`;
-    }
-
-    if (i % 2 === 1) {
-      const filter = {};
-      const filterSelector = `${pathSegments[i - 1]}Id._id`;
-      filter[filterSelector] = mongoose.Types.ObjectId(segment);
-      filters.push(filter);
-
-      selector = `${selector}.$[${pathSegments[i - 1]}Id]`;
-    }
-  });
-
-  return { selector, filters };
 };
 
 const deleteFieldTemplate = (env, pathSegments) => {
