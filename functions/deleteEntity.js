@@ -81,8 +81,6 @@ const deleteNestedEntitySearchParams = (env, pathSegments, queryParams) => {
   return { update, options };
 };
 
-// { $unset: { 'environments.$[envId].dev.da': '' } },
-// { arrayFilters: [{ 'envId.dev': { $exists: true } }] },
 const deleteEntityTemplate = (env, entity) => {
   const unset = {};
   const unsetSelector = `environments.$[envId].${env}.${entity}`;
@@ -101,12 +99,7 @@ const deleteEntityTemplate = (env, entity) => {
   return { update, options };
 };
 
-// { $pull: { 'environments.$[envId].dev.users': { name: 'Tom' } } },
-// { arrayFilters: [{ 'envId.dev': { $exists: true } }] },
-
 const deleteEntityWithSearchParams = (env, entity, queryParams) => {
-  const filter = getFirstFilter(env);
-
   const pull = {};
   const pullSelector = `environments.$[envId].${env}.${entity}`;
   pull[pullSelector] = {};
@@ -124,6 +117,7 @@ const deleteEntityWithSearchParams = (env, entity, queryParams) => {
     $pull: pull,
   };
 
+  const filter = getFirstFilter(env);
   const arrayFilters = [filter];
   const options = { arrayFilters };
 
@@ -132,9 +126,10 @@ const deleteEntityWithSearchParams = (env, entity, queryParams) => {
 
 const deleteElementOfArrayTemplate = (env, pathSegments) => {
   const pullObject = {};
-  let pullSelector = baseSelector;
+  let pullSelector = `environments.$[envId].${env}`;
 
-  const arrayFilters = getFirstFilter(env, pathSegments[0]);
+  const firstFilter = getFirstFilter(env);
+  const arrayFilters = [firstFilter];
 
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
@@ -188,6 +183,8 @@ const deleteEntity = async (event, context, callback) => {
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
+
+  const userId = mongoose.Types.ObjectId('601908eb145ca1d3052c7d83');
 
   const query = {
     username,
