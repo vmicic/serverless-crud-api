@@ -86,16 +86,23 @@ const deleteNestedEntitySearchParams = (
   return { update, options };
 };
 
-const deleteEntityTemplate = (env, pathSegments) => {
-  const entityCondition = {};
-  entityCondition[pathSegments[0]] = { $exists: true };
+// { $unset: { 'environments.$[envId].dev.da': '' } },
+// { arrayFilters: [{ 'envId.dev': { $exists: true } }] },
+const deleteEntityTemplate = (env, entity) => {
+  const unset = {};
+  const unsetSelector = `environments.$[envId].${env}.${entity}`;
+  unset[unsetSelector] = '';
 
   const update = {
-    $pull: { 'environments.$[envId].entities': entityCondition },
+    $unset: unset,
   };
 
+  const filter = {};
+  const filterSelector = `envId.${env}`;
+  filter[filterSelector] = { $exists: true };
+
   const options = {
-    arrayFilters: [{ 'envId.name': env }],
+    arrayFilters: [filter],
   };
 
   return { update, options };
@@ -203,6 +210,9 @@ const deleteEntity = async (event, context, callback) => {
     pathSegments,
     queryStringParameters,
   );
+
+  console.log(update);
+  console.log(options);
 
   const User = getUserModel();
   await User.updateOne(query, update, options);
