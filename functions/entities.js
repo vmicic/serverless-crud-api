@@ -1,50 +1,63 @@
 const mongoose = require('mongoose');
-const { User } = require('../models/user.js');
+const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
-const { getUsernameAndEnv } = require('../util/urlUtils');
 
 /* eslint-disable no-param-reassign */
-const addIdForObjects = (content) => {
-  if (Array.isArray(content)) {
-    content.forEach((el) => {
-      addIdForObjects(el);
-    });
-  } else if (typeof content === 'object' && content !== null) {
-    Object.keys(content).forEach((el) => {
-      if (Array.isArray(content[el])) {
-        addIdForObjects(content[el]);
-      } else if (typeof content[el] === 'object' && content[el] !== null) {
-        addIdForObjects(content[el]);
+/* eslint-disable no-underscore-dangle */
+const addIdForObjects = (array) => {
+  if (Array.isArray(array)) {
+    array.forEach((element) => {
+      if (typeof element === 'object' && element !== null) {
+        element._id = mongoose.Types.ObjectId();
+        Object.keys(element).forEach((field) => {
+          if (Array.isArray(element[field])) {
+            addIdForObjects(element[field]);
+          }
+        });
       }
     });
-    // eslint-disable-next-line no-underscore-dangle
-    content._id = mongoose.Types.ObjectId();
   }
 };
 
-const createEntity = async (event) => {
+const createEntity = async (event, context, callback) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
+  const { username, environment } = event.pathParameters;
+  const entity = JSON.parse(event.body);
+  const entityName = Object.keys(entity)[0];
 
-  const { username, env } = getUsernameAndEnv(event.path);
-  const { body } = event;
-  const entityName = Object.keys(body)[0];
-
-  addIdForObjects(body[entityName]);
+  addIdForObjects(entity[entityName]);
 
   const query = {
     username,
-    'environments.name': env,
   };
 
-  await User.findOneAndUpdate(
-    query,
-    { $push: { 'environments.$.entities': body } },
-    { useFindAndModify: false },
-  ).exec();
+  const setObject = {};
+  // eslint-disable-next-line operator-linebreak
+  setObject[`environments.$[envId].${environment}.${entityName}`] =
+    entity[entityName];
+
+  const filter = {};
+  filter[`envId.${environment}`] = { $exists: true };
+
+  const arrayFilters = [];
+  arrayFilters.push(filter);
+
+  const update = { $set: setObject };
+  const options = {
+    arrayFilters,
+    useFindAndModify: false,
+  };
+
+  console.log(update);
+  console.log(options);
+
+  const User = getUserModel();
+  await User.findOneAndUpdate(query, update, options).exec();
   await mongoose.connection.close();
+  callback(null, { statusCode: 201 });
 };
 
 module.exports = {

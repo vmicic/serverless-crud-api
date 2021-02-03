@@ -1,137 +1,212 @@
 const mongoose = require('mongoose');
-const { User } = require('../models/user.js');
-const { mongodbUri } = require('../url-config');
-const {
-  getUsernameAndEnv,
-  getSegmentsWithoutUsernameAndEnv,
-} = require('../util/urlUtils');
+const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
+const { getUserModel } = require('../models/user.js');
+const { successResponse } = require('../util/responseUtil');
+require('dotenv').config();
+/* eslint-disable no-underscore-dangle */
+const getProjectQuery = (array, params) => {
+  const filterObject = {};
+  filterObject.input = `$${array}`;
+  filterObject.as = 'item';
+  const conditions = [];
 
-const getSearchParamsQuery = (baseSelectorStr, searchParams) => {
-  const queryPropTemplate = [];
-  queryPropTemplate.push({
-    $unwind: `$${baseSelectorStr}`,
-  });
-
-  searchParams.forEach((value, key) => {
-    const matchObject = {};
+  Object.entries(params).forEach((entry) => {
+    const [key, value] = entry;
+    let condition = {};
     if (+value) {
-      matchObject[`${baseSelectorStr}.${key}`] = +value;
+      condition = { $eq: [`$$item.${key}`, +value] };
     } else {
-      matchObject[`${baseSelectorStr}.${key}`] = value;
+      condition = { $eq: [`$$item.${key}`, value] };
     }
-    queryPropTemplate.push({ $match: matchObject });
+    conditions.push(condition);
   });
+  filterObject.cond = { $and: conditions };
+  const projectObj = {};
+  projectObj[array] = { $filter: filterObject };
 
-  return queryPropTemplate;
+  return projectObj;
 };
 
-const getQueryParams = (segments, searchParams) => {
-  const segmentLengthOdd = segments.length % 2 === 1;
-  let lastSegment;
-  if (segmentLengthOdd) {
-    lastSegment = segments.pop();
-  }
+const getEntityDbQuery = (entity, environment) => {
+  const matchObj = {};
+  matchObj[`environments.${environment}`] = { $exists: true };
 
-  let queryTemplate = [];
-  segments.forEach((segment, i) => {
-    if (i % 2 === 1) {
-      const entityId = mongoose.Types.ObjectId(segment);
-      const matchCondition = {};
-      if (queryTemplate.length === 0) {
-        queryTemplate.push({
-          $unwind: `$environments.entities.${segments[i - 1]}`,
-        });
-
-        matchCondition[
-          `environments.entities.${segments[i - 1]}._id`
-        ] = entityId;
-        queryTemplate.push({ $match: matchCondition });
-      } else {
-        queryTemplate.push({
-          $unwind: `${queryTemplate[queryTemplate.length - 2].$unwind}.${
-            segments[i - 1]
-          }`,
-        });
-
-        matchCondition[
-          `${queryTemplate[queryTemplate.length - 1].$unwind.substring(1)}._id`
-        ] = entityId;
-        queryTemplate.push({ $match: matchCondition });
-      }
-    }
+  const queryTemplate = [];
+  queryTemplate.push({ $match: matchObj });
+  queryTemplate.push({
+    $replaceRoot: { newRoot: `$environments.${environment}` },
   });
 
-  // for queries with no nested entities
-  if (queryTemplate.length === 0) {
-    const entitySelector = `environments.entities.${lastSegment}`;
-
-    if (searchParams.keys().next().done === false) {
-      queryTemplate = queryTemplate.concat(
-        getSearchParamsQuery(entitySelector, searchParams),
-      );
-    } else {
-      queryTemplate.push({ $unwind: `$${entitySelector}` });
-    }
-
-    queryTemplate.push({
-      $replaceRoot: { newRoot: `$${entitySelector}` },
-    });
-  } else {
-    const entitySelector = `${
-      queryTemplate[queryTemplate.length - 2].$unwind
-    }.${lastSegment}`.substring(1);
-
-    if (searchParams.keys().next().done === false) {
-      queryTemplate = queryTemplate.concat(
-        getSearchParamsQuery(entitySelector, searchParams),
-      );
-    }
-
-    if (segmentLengthOdd) {
-      queryTemplate.push(
-        { $unwind: `$${entitySelector}` },
-        {
-          $replaceRoot: { newRoot: `$${entitySelector}` },
-        },
-      );
-    } else {
-      queryTemplate.push({
-        $replaceRoot: {
-          newRoot: `${queryTemplate[queryTemplate.length - 2].$unwind}`,
-        },
-      });
-    }
-  }
+  const projectObj = {};
+  projectObj[entity] = 1;
+  projectObj._id = 0;
+  queryTemplate.push({
+    $project: projectObj,
+  });
 
   return queryTemplate;
 };
 
+const getEntityByQueryParamsDbQuery = (entity, environment, queryParams) => {
+  const queryTemplate = [];
+  const matchObject = {};
+  const environmentSelector = `environments.${environment}`;
+  matchObject[environmentSelector] = { $exists: true };
+  queryTemplate.push({ $match: matchObject });
+
+  const selector = `environments.${environment}.${entity}`;
+  queryTemplate.push({ $project: getProjectQuery(selector, queryParams) });
+  queryTemplate.push({ $replaceRoot: { newRoot: `$${environmentSelector}` } });
+
+  return queryTemplate;
+};
+
+const getNestedEntitiesByQueryParamsDbQuery = (
+  pathSegments,
+  environment,
+  queryParams,
+) => {
+  const queryTemplate = [];
+  let selector = `environments.${environment}`;
+  pathSegments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      if (i + 1 !== pathSegments.length) {
+        selector = `${selector}.${segment}`;
+        queryTemplate.push({ $unwind: `$${selector}` });
+      }
+      // if at id segment
+    } else if (i % 2 === 1) {
+      const matchObj = {};
+      matchObj[`${selector}._id`] = mongoose.Types.ObjectId(segment);
+      queryTemplate.push({ $match: matchObj });
+      queryTemplate.push();
+    }
+  });
+
+  const lastSegment = pathSegments.slice(-1).pop();
+
+  if (queryParams === null) {
+    queryTemplate.push({ $replaceRoot: { newRoot: `$${selector}` } });
+
+    const projectObj = {};
+    projectObj._id = 0;
+    projectObj[lastSegment] = 1;
+    queryTemplate.push({ $project: projectObj });
+
+    return queryTemplate;
+  }
+
+  queryTemplate.push({
+    $project: getProjectQuery(`${selector}.${lastSegment}`, queryParams),
+  });
+  queryTemplate.push({ $replaceRoot: { newRoot: `$${selector}` } });
+
+  return queryTemplate;
+};
+
+const getEntityByIdDbQuery = (pathSegments, environment) => {
+  const queryTemplate = [];
+  const matchObject = {};
+  const environmentSelector = `environments.${environment}`;
+  matchObject[environmentSelector] = { $exists: true };
+  queryTemplate.push({ $match: matchObject });
+
+  let selector = `environments.${environment}.${pathSegments[0]}`;
+
+  if (pathSegments.length === 2) {
+    const itemId = mongoose.Types.ObjectId(pathSegments[1]);
+    const queryParams = { _id: itemId };
+
+    queryTemplate.push({ $project: getProjectQuery(selector, queryParams) });
+    queryTemplate.push({
+      $replaceRoot: { newRoot: `$${environmentSelector}` },
+    });
+    return queryTemplate;
+  }
+  pathSegments.forEach((segment, i) => {
+    if (i === 0) {
+      queryTemplate.push({ $unwind: `$${selector}` });
+      // if at id segment
+    } else if (i % 2 === 1) {
+      if (i + 1 !== pathSegments.length) {
+        const matchObj = {};
+        matchObj[`${selector}._id`] = mongoose.Types.ObjectId(segment);
+        queryTemplate.push({ $match: matchObj });
+        queryTemplate.push();
+      }
+    } else if (i + 2 !== pathSegments.length) {
+      selector = `${selector}.${segment}`;
+      queryTemplate.push({ $unwind: `$${selector}` });
+    } else {
+      selector = `${selector}.${segment}`;
+    }
+  });
+
+  const itemId = mongoose.Types.ObjectId(pathSegments.slice(-1).pop());
+  const queryParams = { _id: itemId };
+
+  queryTemplate.push({ $project: getProjectQuery(selector, queryParams) });
+  queryTemplate.push({
+    $replaceRoot: { newRoot: queryTemplate[queryTemplate.length - 3].$unwind },
+  });
+
+  return queryTemplate;
+};
+
+const getDbQuery = (pathSegments, environment, queryParams) => {
+  if (pathSegments.length === 1) {
+    if (queryParams !== null) {
+      return getEntityByQueryParamsDbQuery(
+        pathSegments[0],
+        environment,
+        queryParams,
+      );
+    }
+    return getEntityDbQuery(pathSegments[0], environment);
+  }
+  if (pathSegments.length % 2 === 0) {
+    return getEntityByIdDbQuery(pathSegments, environment);
+  }
+
+  return getNestedEntitiesByQueryParamsDbQuery(
+    pathSegments,
+    environment,
+    queryParams,
+  );
+};
+
 const getEntity = async (event) => {
-  await mongoose.connect(mongodbUri, {
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
+  const { username, environment } = event.pathParameters;
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+  const { queryStringParameters } = event;
 
-  const url = new URL(event.path);
-  const { username, env } = getUsernameAndEnv(url.pathname);
-  const pathSegments = getSegmentsWithoutUsernameAndEnv(url.pathname);
-  const { searchParams } = url;
+  const query = getDbQuery(
+    [...pathSegments],
+    environment,
+    queryStringParameters,
+  );
 
-  const queryTemplate = getQueryParams([...pathSegments], searchParams);
-
-  const agregateTemplate = [
+  const agreagateQuery = [
     { $match: { username } },
-    {
-      $unwind: '$environments',
-    },
-    { $match: { 'environments.name': env } },
-    { $unwind: '$environments.entities' },
-  ].concat(queryTemplate);
-  const doc = await User.aggregate(agregateTemplate).exec();
+    { $unwind: '$environments' },
+  ].concat(query);
+
+  const User = getUserModel();
+  const doc = await User.aggregate(agreagateQuery).exec();
   await mongoose.connection.close();
-  return doc;
+  return successResponse(200, doc[0]);
 };
 
 module.exports = {
   getEntity,
+  getEntityDbQuery,
+  getEntityByQueryParamsDbQuery,
+  getEntityByIdDbQuery,
+  getNestedEntitiesByQueryParamsDbQuery,
+  getProjectQuery,
+  getDbQuery,
 };

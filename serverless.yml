@@ -10,6 +10,8 @@
 #    docs.serverless.com
 #
 # Happy Coding!
+plugins:
+  - serverless-offline
 
 service: fiverr-api
 # app and org for use with dashboard.serverless.com
@@ -63,32 +65,38 @@ functions:
     handler: functions/environments.createEnv
     events:
       - httpApi:
-          path: /{username}
+          path: /api/{username}
           method: PUT
   getEnv:
     handler: functions/environments.getEnv
     events:
       - httpApi:
-          path: /{username}/{environment}
+          path: /api/{username}/{environment}
+          method: GET
+  getEntity:
+    handler: functions/getEntities.getEntity
+    events:
+      - httpApi:
+          path: /api/{username}/{environment}/{any+}
           method: GET
   createEntity:
     handler: functions/entities.createEntity
     events:
       - httpApi:
-          path: /{username}/{environment}
+          path: /api/{username}/{environment}
           method: PUT
-  getEntity:
-    handler: functions/getEntities.getEntity
-    events:
-      - httpApi:
-          path: /{username}/{environent}/{entity}/*
-          method: GET
   extendEntity:
     handler: functions/extendEntity.extendEntity
     events:
       - httpApi:
-          path: /{username}/{environent}/*
+          path: /api/{username}/{environment}/{any+}
           method: PUT
+  deleteEntity:
+    handler: functions/deleteEntity.deleteEntity
+    events:
+      - httpApi:
+          path: /api/{username}/{environment}/{any+}
+          method: DELETE
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details

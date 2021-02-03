@@ -1,48 +1,68 @@
 const mongoose = require('mongoose');
-const { Environment } = require('../models/environment.js');
-const { User } = require('../models/user.js');
-const { getUsername, getUsernameAndEnv } = require('../util/urlUtils.js');
-const { mongodbUri } = require('../url-config');
+const { getUserModel } = require('../models/user.js');
+const { successResponse, errorResponse } = require('../util/responseUtil');
+require('dotenv').config();
 
 const createEnv = async (event) => {
-  await mongoose.connect(mongodbUri, {
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
-  const environmentName = event.body;
-  const username = getUsername(event.path);
+  const envName = event.body;
+  if (!(typeof envName === 'string' || envName instanceof String)) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Environment name is not string.');
+  }
 
-  const environment = new Environment({
-    name: environmentName,
-    entities: [],
-  });
+  const { username } = event.pathParameters;
 
+  const environmentQuery = {};
+  environmentQuery[`environments.${envName}`] = { $exists: false };
   const query = {
     username,
-    'environments.name': { $ne: environmentName },
+  };
+  query[`environments.${envName}`] = { $exists: false };
+
+  const env = {};
+  env[envName] = {};
+  const update = {
+    $push: { environments: env },
   };
 
-  await User.findOneAndUpdate(
-    query,
-    { $push: { environments: environment } },
-    { useFindAndModify: false },
-  ).exec();
+  const User = getUserModel();
+  const result = await User.updateOne(query, update).exec();
   await mongoose.connection.close();
+
+  if (result.nModified === 0) {
+    return errorResponse(
+      400,
+      'Environment already exists or username not found.',
+    );
+  }
+  return successResponse(201, event);
 };
 
 const getEnv = async (event) => {
-  await mongoose.connect(mongodbUri, {
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
-  const { username, env } = getUsernameAndEnv(event.path);
+  const { username, environment } = event.pathParameters;
 
-  const query = { username, 'environments.name': env };
+  const query = { username };
+  const environmentSelector = `environments.${environment}`;
+  query[environmentSelector] = { $exists: true };
+
+  const User = getUserModel();
   const doc = await User.findOne(query, 'environments.$').exec();
   await mongoose.connection.close();
-  return doc.environments[0].entities;
+
+  if (doc == null) {
+    return errorResponse(404, 'Request environment not found.');
+  }
+  return successResponse(200, doc.environments[0][environment]);
 };
 
 module.exports = {
