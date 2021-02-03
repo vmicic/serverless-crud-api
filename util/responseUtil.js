@@ -1,10 +1,11 @@
-const successResponse = (statusCode, bodyPayload) => {
-  const response = {
-    statusCode,
-    body: JSON.stringify(bodyPayload),
-  };
+const successResponse = (statusCode, message) => ({
+  statusCode,
+  body: JSON.stringify(message),
+});
 
-  return response;
-};
+const errorResponse = (statusCode, message) => ({
+  statusCode,
+  body: message,
+});
 
-module.exports = { successResponse };
+module.exports = { successResponse, errorResponse };

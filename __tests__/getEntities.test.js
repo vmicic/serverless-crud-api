@@ -434,7 +434,7 @@ test('find nested entities with multiple query params', () => {
 });
 
 const initializeDb = async () => {
-  await mongoose.connect(process.env.MONDGODB_URI, {
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });

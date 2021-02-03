@@ -176,7 +176,7 @@ const getDbQuery = (pathSegments, environment, queryParams) => {
 };
 
 const getEntity = async (event) => {
-  await mongoose.connect(process.env.MONDGODB_URI, {
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
