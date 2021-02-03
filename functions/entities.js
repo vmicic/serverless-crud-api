@@ -51,6 +51,9 @@ const createEntity = async (event, context, callback) => {
     useFindAndModify: false,
   };
 
+  console.log(update);
+  console.log(options);
+
   const User = getUserModel();
   await User.findOneAndUpdate(query, update, options).exec();
   await mongoose.connection.close();
