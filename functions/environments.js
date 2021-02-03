@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
-const { mongodbUri } = require('../url-config');
 const { successResponse, errorResponse } = require('../util/responseUtil');
 require('dotenv').config();
 
@@ -59,6 +58,7 @@ const getEnv = async (event) => {
   const User = getUserModel();
   const doc = await User.findOne(query, 'environments.$').exec();
   await mongoose.connection.close();
+
   if (doc == null) {
     return errorResponse(404, 'Request environment not found.');
   }

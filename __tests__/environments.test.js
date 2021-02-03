@@ -12,11 +12,13 @@ const initializeDb = async () => {
   await User.deleteMany({});
   const user = new User({ username: 'ghost' });
   await user.save();
+
   await User.findOneAndUpdate(
     { username: 'ghost' },
     { $push: { environments: [{ dev: {} }, { prod: {} }] } },
     { useFindAndModify: false },
   ).exec();
+
   const users = [
     { name: 'John', age: 38 },
     { name: 'Tom', age: 39 },
@@ -53,6 +55,17 @@ describe('create env', () => {
     const event = {
       path: '/api/ghost',
       pathParameters: { username: 'ghost' },
+      body: 'test',
+    };
+
+    const response = await createEnv(event);
+    expect(response.statusCode).toBe(400);
+  });
+
+  test('create env with invalid username', async () => {
+    const event = {
+      path: '/api/notexisting',
+      pathParameters: { username: 'notexisting' },
       body: 'test',
     };
 
