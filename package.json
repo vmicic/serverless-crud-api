@@ -4,6 +4,8 @@
   },
   "dependencies": {
     "@serverless/fdk": "github:serverless/fdk",
+    "@shelf/jest-mongodb": "^1.2.3",
+    "dotenv": "^8.2.0",
     "mongoose": "^5.11.12"
   },
   "devDependencies": {

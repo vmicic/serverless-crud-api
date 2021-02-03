@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 
-const createEnv = async (event, context, callback) => {
+const createEnv = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -24,10 +24,9 @@ const createEnv = async (event, context, callback) => {
     { useFindAndModify: false },
   ).exec();
   await mongoose.connection.close();
-  callback(null, { statusCode: 201 });
 };
 
-const getEnv = async (event, context, callback) => {
+const getEnv = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -43,11 +42,6 @@ const getEnv = async (event, context, callback) => {
   const doc = await User.findOne(query, 'environments.$').exec();
 
   await mongoose.connection.close();
-  callback(null, {
-    statusCode: 200,
-    body: JSON.stringify(doc.environments[0][environment]),
-    headers: { 'Content-Type': 'application/json' },
-  });
 };
 
 module.exports = {

@@ -1,9 +1,8 @@
 const mongoose = require('mongoose');
-const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { getUserModel } = require('../models/user.js');
 const { successResponse } = require('../util/responseUtil');
-
+require('dotenv').config();
 /* eslint-disable no-underscore-dangle */
 const getProjectQuery = (array, params) => {
   const filterObject = {};
@@ -154,7 +153,7 @@ const getEntityByIdDbQuery = (pathSegments, environment) => {
   return queryTemplate;
 };
 
-const getDbQuery = (pathSegments, queryParams, environment) => {
+const getDbQuery = (pathSegments, environment, queryParams) => {
   if (pathSegments.length === 1) {
     if (queryParams !== null) {
       return getEntityByQueryParamsDbQuery(
@@ -177,7 +176,7 @@ const getDbQuery = (pathSegments, queryParams, environment) => {
 };
 
 const getEntity = async (event) => {
-  await mongoose.connect(mongodbUri, {
+  await mongoose.connect(process.env.MONDGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
@@ -187,11 +186,9 @@ const getEntity = async (event) => {
 
   const query = getDbQuery(
     [...pathSegments],
-    queryStringParameters,
     environment,
+    queryStringParameters,
   );
-
-  console.log(query);
 
   const agreagateQuery = [
     { $match: { username } },
@@ -211,4 +208,5 @@ module.exports = {
   getEntityByIdDbQuery,
   getNestedEntitiesByQueryParamsDbQuery,
   getProjectQuery,
+  getDbQuery,
 };
