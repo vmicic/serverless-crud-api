@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { getUserModel } = require('../models/user.js');
+const { successResponse } = require('../util/responseUtil');
 
 /* eslint-disable no-underscore-dangle */
 const getProjectQuery = (array, params) => {
@@ -27,12 +28,12 @@ const getProjectQuery = (array, params) => {
   return projectObj;
 };
 
-const findEntity = (entity, environment) => {
-  const queryTemplate = [];
+const getEntityDbQuery = (entity, environment) => {
   const matchObj = {};
   matchObj[`environments.${environment}`] = { $exists: true };
-  queryTemplate.push({ $match: matchObj });
 
+  const queryTemplate = [];
+  queryTemplate.push({ $match: matchObj });
   queryTemplate.push({
     $replaceRoot: { newRoot: `$environments.${environment}` },
   });
@@ -40,7 +41,6 @@ const findEntity = (entity, environment) => {
   const projectObj = {};
   projectObj[entity] = 1;
   projectObj._id = 0;
-
   queryTemplate.push({
     $project: projectObj,
   });
@@ -48,7 +48,7 @@ const findEntity = (entity, environment) => {
   return queryTemplate;
 };
 
-const findEntityByQueryParams = (entity, queryParams, environment) => {
+const getEntityByQueryParamsDbQuery = (entity, environment, queryParams) => {
   const queryTemplate = [];
   const matchObject = {};
   const environmentSelector = `environments.${environment}`;
@@ -56,14 +56,17 @@ const findEntityByQueryParams = (entity, queryParams, environment) => {
   queryTemplate.push({ $match: matchObject });
 
   const selector = `environments.${environment}.${entity}`;
-
   queryTemplate.push({ $project: getProjectQuery(selector, queryParams) });
   queryTemplate.push({ $replaceRoot: { newRoot: `$${environmentSelector}` } });
 
   return queryTemplate;
 };
 
-const findNestedEntities = (pathSegments, queryParams, environment) => {
+const getNestedEntitiesByQueryParamsDbQuery = (
+  pathSegments,
+  environment,
+  queryParams,
+) => {
   const queryTemplate = [];
   let selector = `environments.${environment}`;
   pathSegments.forEach((segment, i) => {
@@ -102,7 +105,7 @@ const findNestedEntities = (pathSegments, queryParams, environment) => {
   return queryTemplate;
 };
 
-const findEntityById = (pathSegments, environment) => {
+const getEntityByIdDbQuery = (pathSegments, environment) => {
   const queryTemplate = [];
   const matchObject = {};
   const environmentSelector = `environments.${environment}`;
@@ -151,25 +154,29 @@ const findEntityById = (pathSegments, environment) => {
   return queryTemplate;
 };
 
-const getQueryParams = (pathSegments, queryStringParameters, environment) => {
+const getDbQuery = (pathSegments, queryParams, environment) => {
   if (pathSegments.length === 1) {
-    if (queryStringParameters !== null) {
-      return findEntityByQueryParams(
-        pathSegments.pop(),
-        queryStringParameters,
+    if (queryParams !== null) {
+      return getEntityByQueryParamsDbQuery(
+        pathSegments[0],
         environment,
+        queryParams,
       );
     }
-    return findEntity(pathSegments.pop(), environment);
+    return getEntityDbQuery(pathSegments[0], environment);
   }
   if (pathSegments.length % 2 === 0) {
-    return findEntityById(pathSegments, environment);
+    return getEntityByIdDbQuery(pathSegments, environment);
   }
 
-  return findNestedEntities(pathSegments, queryStringParameters, environment);
+  return getNestedEntitiesByQueryParamsDbQuery(
+    pathSegments,
+    environment,
+    queryParams,
+  );
 };
 
-const getEntity = async (event, context, callback) => {
+const getEntity = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -178,27 +185,30 @@ const getEntity = async (event, context, callback) => {
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
 
-  const queryTemplate = getQueryParams(
+  const query = getDbQuery(
     [...pathSegments],
     queryStringParameters,
     environment,
   );
 
-  const agregateTemplate = [
+  console.log(query);
+
+  const agreagateQuery = [
     { $match: { username } },
     { $unwind: '$environments' },
-  ].concat(queryTemplate);
+  ].concat(query);
 
   const User = getUserModel();
-  const doc = await User.aggregate(agregateTemplate).exec();
+  const doc = await User.aggregate(agreagateQuery).exec();
   await mongoose.connection.close();
-  callback(null, {
-    statusCode: 200,
-    body: JSON.stringify(doc[0]),
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return successResponse(200, doc[0]);
 };
 
 module.exports = {
   getEntity,
+  getEntityDbQuery,
+  getEntityByQueryParamsDbQuery,
+  getEntityByIdDbQuery,
+  getNestedEntitiesByQueryParamsDbQuery,
+  getProjectQuery,
 };
