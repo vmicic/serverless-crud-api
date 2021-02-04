@@ -105,9 +105,7 @@ const extendEntity = async (event, context, callback) => {
   if (pathSegments.length % 2 === 1) {
     addIdForObjects(bodyPayload);
   } else {
-    console.log(bodyPayload);
     bodyPayload._id = mongoose.Types.ObjectId();
-    console.log('Added if for one object');
   }
 
   addIdForObjects(bodyPayload);

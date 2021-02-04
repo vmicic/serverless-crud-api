@@ -527,7 +527,7 @@ const initializeDb = async () => {
     { useFindAndModify: false },
   ).exec();
 
-  await User.findOneAndUpdate(
+  await User.updateOne(
     { username: 'ghost' },
     {
       $set: { 'environments.$[envId].dev.users': users },
