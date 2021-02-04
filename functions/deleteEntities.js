@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
-const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { getSelectorAndFilters } = require('./extendEntities');
+const { successResponse, errorResponse } = require('../util/responseUtil');
+require('dotenv').config();
 
 const getFirstFilter = (env) => {
   const filter = {};
@@ -11,7 +12,7 @@ const getFirstFilter = (env) => {
   return filter;
 };
 
-const deleteFieldTemplate = (env, pathSegments) => {
+const deleteFieldQuery = (env, pathSegments) => {
   let arrayFilters = [getFirstFilter(env)];
 
   const { selector, filters } = getSelectorAndFilters(
@@ -29,7 +30,11 @@ const deleteFieldTemplate = (env, pathSegments) => {
   return { update, options };
 };
 
-const deleteNestedFieldQueryParams = (env, pathSegments, queryParams) => {
+const deleteNestedFieldWithQueryParamsQuery = (
+  env,
+  pathSegments,
+  queryParams,
+) => {
   let arrayFilters = [getFirstFilter(env)];
 
   const { selector, filters } = getSelectorAndFilters(
@@ -56,7 +61,7 @@ const deleteNestedFieldQueryParams = (env, pathSegments, queryParams) => {
   return { update, options };
 };
 
-const deleteEntityTemplate = (env, entity) => {
+const deleteEntityQuery = (env, entity) => {
   const unset = {};
   const unsetSelector = `environments.$[envId].${env}.${entity}`;
   unset[unsetSelector] = '';
@@ -74,7 +79,7 @@ const deleteEntityTemplate = (env, entity) => {
   return { update, options };
 };
 
-const deleteEntityWithSearchParams = (env, entity, queryParams) => {
+const deleteEntityWithQueryParamsQuery = (env, entity, queryParams) => {
   const pull = {};
   const pullSelector = `environments.$[envId].${env}.${entity}`;
   pull[pullSelector] = {};
@@ -99,7 +104,7 @@ const deleteEntityWithSearchParams = (env, entity, queryParams) => {
   return { update, options };
 };
 
-const deleteElementOfArrayTemplate = (env, pathSegments) => {
+const deleteElementOfArrayQuery = (env, pathSegments) => {
   const pull = {};
   let pullSelector = `environments.$[envId].${env}`;
 
@@ -134,23 +139,44 @@ const deleteElementOfArrayTemplate = (env, pathSegments) => {
 const getQueryParams = (env, pathSegments, queryParams) => {
   if (pathSegments.length === 1) {
     if (queryParams !== null) {
-      return deleteEntityWithSearchParams(env, pathSegments[0], queryParams);
+      return deleteEntityWithQueryParamsQuery(
+        env,
+        pathSegments[0],
+        queryParams,
+      );
     }
-    return deleteEntityTemplate(env, pathSegments[0]);
+    return deleteEntityQuery(env, pathSegments[0]);
   }
 
   if (pathSegments.length % 2 === 1) {
     if (queryParams !== null) {
-      return deleteNestedFieldQueryParams(env, pathSegments, queryParams);
+      return deleteNestedFieldWithQueryParamsQuery(
+        env,
+        pathSegments,
+        queryParams,
+      );
     }
-    return deleteFieldTemplate(env, pathSegments);
+    return deleteFieldQuery(env, pathSegments);
   }
 
-  return deleteElementOfArrayTemplate(env, pathSegments);
+  return deleteElementOfArrayQuery(env, pathSegments);
 };
 
-const deleteEntity = async (event, context, callback) => {
-  await mongoose.connect(mongodbUri, {
+const idsInvalid = (pathSegments) => {
+  try {
+    pathSegments.forEach((segment, i) => {
+      if (i % 2 === 1) {
+        mongoose.Types.ObjectId(segment);
+      }
+    });
+  } catch (error) {
+    return true;
+  }
+  return false;
+};
+
+const deleteEntity = async (event) => {
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
@@ -158,6 +184,11 @@ const deleteEntity = async (event, context, callback) => {
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
+
+  if (idsInvalid(pathSegments)) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Id in path is invalid.');
+  }
 
   const query = {
     username,
@@ -169,9 +200,23 @@ const deleteEntity = async (event, context, callback) => {
   );
 
   const User = getUserModel();
-  await User.updateOne(query, update, options);
+  try {
+    await User.updateOne(query, update, options);
+  } catch (error) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Bad request');
+  }
   await mongoose.connection.close();
-  callback(null, { statusCode: 200 });
+
+  return successResponse(204);
 };
 
-module.exports = { deleteEntity };
+module.exports = {
+  deleteEntity,
+  getFirstFilter,
+  deleteEntityQuery,
+  deleteEntityWithQueryParamsQuery,
+  deleteFieldQuery,
+  deleteNestedFieldWithQueryParamsQuery,
+  deleteElementOfArrayQuery,
+};
