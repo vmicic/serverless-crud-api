@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
 const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
-const { getSelectorAndFilters } = require('./extendEntity');
+const { getSelectorAndFilters } = require('./extendEntities');
 
 const getFirstFilter = (env) => {
   const filter = {};

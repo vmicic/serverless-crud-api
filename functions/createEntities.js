@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
-const { mongodbUri } = require('../url-config');
+const { successResponse, errorResponse } = require('../util/responseUtil');
+require('dotenv').config();
 
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-underscore-dangle */
@@ -19,15 +20,27 @@ const addIdForObjects = (array) => {
   }
 };
 
-const createEntity = async (event, context, callback) => {
-  await mongoose.connect(mongodbUri, {
+const createEntity = async (event) => {
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
   const { username, environment } = event.pathParameters;
-  const entity = JSON.parse(event.body);
-  const entityName = Object.keys(entity)[0];
+  let entity;
 
+  try {
+    entity = JSON.parse(event.body);
+  } catch (error) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Invalid body.');
+  }
+
+  if (Object.keys(entity).length !== 1) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Invalid body.');
+  }
+
+  const entityName = Object.keys(entity)[0];
   addIdForObjects(entity[entityName]);
 
   const query = {
@@ -38,28 +51,28 @@ const createEntity = async (event, context, callback) => {
   // eslint-disable-next-line operator-linebreak
   setObject[`environments.$[envId].${environment}.${entityName}`] =
     entity[entityName];
+  const update = { $set: setObject };
 
   const filter = {};
   filter[`envId.${environment}`] = { $exists: true };
-
   const arrayFilters = [];
   arrayFilters.push(filter);
-
-  const update = { $set: setObject };
   const options = {
     arrayFilters,
     useFindAndModify: false,
   };
 
-  console.log(update);
-  console.log(options);
-
   const User = getUserModel();
-  await User.findOneAndUpdate(query, update, options).exec();
+  const result = await User.updateOne(query, update, options).exec();
   await mongoose.connection.close();
-  callback(null, { statusCode: 201 });
+  if (result.nModified === 0) {
+    return errorResponse(404, 'Unable to create requested entity.');
+  }
+
+  return successResponse(201);
 };
 
 module.exports = {
   createEntity,
+  addIdForObjects,
 };

@@ -198,6 +198,7 @@ const getEntity = async (event) => {
 
   const User = getUserModel();
   const doc = await User.aggregate(agreagateQuery).exec();
+  await mongoose.connection.close();
   if (
     doc === undefined ||
     doc.length === 0 ||
@@ -206,7 +207,6 @@ const getEntity = async (event) => {
     return errorResponse(404, 'Requested entity not found.');
   }
 
-  await mongoose.connection.close();
   return successResponse(200, doc[0]);
 };
 

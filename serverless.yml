@@ -80,19 +80,22 @@ functions:
           path: /api/{username}/{environment}/{any+}
           method: GET
   createEntity:
-    handler: functions/entities.createEntity
+    handler: functions/createEntities.createEntity
     events:
       - httpApi:
           path: /api/{username}/{environment}
           method: PUT
+      - httpApi:
+          path: /api/{username}/{environment}
+          method: POST
   extendEntity:
-    handler: functions/extendEntity.extendEntity
+    handler: functions/extendEntities.extendEntity
     events:
       - httpApi:
           path: /api/{username}/{environment}/{any+}
           method: PUT
   deleteEntity:
-    handler: functions/deleteEntity.deleteEntity
+    handler: functions/deleteEntities.deleteEntity
     events:
       - httpApi:
           path: /api/{username}/{environment}/{any+}
