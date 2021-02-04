@@ -1,7 +1,8 @@
+/* eslint-disable operator-linebreak */
 const mongoose = require('mongoose');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { getUserModel } = require('../models/user.js');
-const { successResponse } = require('../util/responseUtil');
+const { successResponse, errorResponse } = require('../util/responseUtil');
 require('dotenv').config();
 /* eslint-disable no-underscore-dangle */
 const getProjectQuery = (array, params) => {
@@ -197,6 +198,14 @@ const getEntity = async (event) => {
 
   const User = getUserModel();
   const doc = await User.aggregate(agreagateQuery).exec();
+  if (
+    doc === undefined ||
+    doc.length === 0 ||
+    Object.keys(doc[0]).length === 0
+  ) {
+    return errorResponse(404, 'Requested entity not found.');
+  }
+
   await mongoose.connection.close();
   return successResponse(200, doc[0]);
 };
