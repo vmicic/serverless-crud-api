@@ -197,8 +197,15 @@ const getEntity = async (event) => {
   ].concat(query);
 
   const User = getUserModel();
-  const doc = await User.aggregate(agreagateQuery).exec();
+  let doc;
+  try {
+    doc = await User.aggregate(agreagateQuery).exec();
+  } catch (error) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Bad request.');
+  }
   await mongoose.connection.close();
+
   if (
     doc === undefined ||
     doc.length === 0 ||

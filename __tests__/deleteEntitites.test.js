@@ -8,8 +8,34 @@ const {
   deleteNestedFieldWithQueryParamsQuery,
   deleteElementOfArrayQuery,
   deleteEntity,
+  idsInvalid,
 } = require('../functions/deleteEntities');
 require('dotenv').config();
+
+test('ids invalid invalid id', () => {
+  const pathSegments = ['users', '6017d6443b553b21603'];
+  expect(idsInvalid(pathSegments)).toBeTruthy();
+});
+
+test('ids invalid nested invalid id', () => {
+  const pathSegments = [
+    'users',
+    '6017d641860f43b553b21603',
+    'posts',
+    '4238094',
+  ];
+  expect(idsInvalid(pathSegments)).toBeTruthy();
+});
+
+test('ids invalid valid id', () => {
+  const pathSegments = ['users', '6017d641860f43b553b21603'];
+  expect(idsInvalid(pathSegments)).toBeFalsy();
+});
+
+test('ids invalid no id', () => {
+  const pathSegments = ['users'];
+  expect(idsInvalid(pathSegments)).toBeFalsy();
+});
 
 test('get first filter', () => {
   const filter = getFirstFilter('dev');

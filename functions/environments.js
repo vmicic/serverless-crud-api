@@ -56,7 +56,13 @@ const getEnv = async (event) => {
   query[environmentSelector] = { $exists: true };
 
   const User = getUserModel();
-  const doc = await User.findOne(query, 'environments.$').exec();
+  let doc;
+  try {
+    doc = await User.findOne(query, 'environments.$').exec();
+  } catch (error) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Bad request.');
+  }
   await mongoose.connection.close();
 
   if (doc == null) {

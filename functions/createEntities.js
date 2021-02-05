@@ -61,7 +61,13 @@ const createEntity = async (event) => {
   };
 
   const User = getUserModel();
-  const result = await User.updateOne(query, update, options).exec();
+  let result;
+  try {
+    result = await User.updateOne(query, update, options);
+  } catch (error) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Bad request.');
+  }
   await mongoose.connection.close();
   if (result.nModified === 0) {
     return errorResponse(404, 'Unable to create requested entity.');
