@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { successResponse, errorResponse } = require('../util/responseUtil');
+const { idsInvalid } = require('./deleteEntities');
 require('dotenv').config();
 
 /* eslint-disable no-param-reassign */
@@ -12,13 +13,13 @@ const addIdForObjects = (array) => {
     array.forEach((element) => {
       if (typeof element === 'object' && element !== null) {
         element._id = mongoose.Types.ObjectId();
-        checkIfFieldsAreArray(element);
+        addIdForArrayInField(element);
       }
     });
   }
 };
 
-const checkIfFieldsAreArray = (object) => {
+const addIdForArrayInField = (object) => {
   Object.keys(object).forEach((field) => {
     if (Array.isArray(object[field])) {
       addIdForObjects(object[field]);
@@ -56,39 +57,43 @@ const getSelectorAndFilters = (pathSegments, env) => {
   return { selector, filters };
 };
 
-const addToExistingEntity = (env, pathSegments, entities) => {
+const addToExistingEntityQuery = (env, pathSegments, entities) => {
   const { selector, filters } = getSelectorAndFilters(pathSegments, env);
 
   const push = {};
   push[selector] = { $each: entities };
 
   const update = { $push: push };
-  const options = { arrayFilters: filters, useFindAndModify: false };
+  const options = { arrayFilters: filters };
   return { update, options };
 };
 
-const replaceEntity = (env, pathSegments, bodyPayload) => {
+const replaceEntityQuery = (env, pathSegments, bodyPayload) => {
   const { selector, filters } = getSelectorAndFilters(pathSegments, env);
 
   const set = {};
   set[selector] = bodyPayload;
 
   const update = { $set: set };
-  const options = { arrayFilters: filters, useFindAndModify: false };
+  const options = { arrayFilters: filters };
   return { update, options };
 };
 
-const getQueryParams = (environment, pathSegments, bodyPayload) => {
+const getQueryParams = (env, pathSegments, bodyPayload) => {
   if (pathSegments.length % 2 === 1) {
-    return addToExistingEntity(environment, pathSegments, bodyPayload);
+    return addToExistingEntityQuery(env, pathSegments, bodyPayload);
   }
 
-  return replaceEntity(environment, pathSegments, bodyPayload);
+  return replaceEntityQuery(env, pathSegments, bodyPayload);
 };
 
 const extendEntity = async (event) => {
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+
+  if (idsInvalid(pathSegments)) {
+    return errorResponse(400, 'Id in path is invalid.');
+  }
 
   let bodyPayload;
   try {
@@ -109,7 +114,7 @@ const extendEntity = async (event) => {
       return errorResponse(400, 'Invalid body.');
     }
     bodyPayload._id = mongoose.Types.ObjectId(pathSegments.slice(-1).pop());
-    checkIfFieldsAreArray(bodyPayload);
+    addIdForArrayInField(bodyPayload);
   }
 
   await mongoose.connect(process.env.MONGODB_URI, {
@@ -142,4 +147,8 @@ const extendEntity = async (event) => {
 module.exports = {
   extendEntity,
   getSelectorAndFilters,
+  addIdForObjects,
+  addIdForArrayInField,
+  replaceEntityQuery,
+  addToExistingEntityQuery,
 };
