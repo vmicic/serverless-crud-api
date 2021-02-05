@@ -7,7 +7,6 @@ const {
   getNestedEntitiesByQueryParamsDbQuery,
   getDbQuery,
   getEntity,
-  // getEntity,
 } = require('../functions/getEntities');
 const { getUserModel } = require('../models/user');
 require('dotenv').config();

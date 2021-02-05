@@ -1,23 +1,29 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
-const { mongodbUri } = require('../url-config');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
+const { successResponse, errorResponse } = require('../util/responseUtil');
+require('dotenv').config();
 
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-underscore-dangle */
+/* eslint-disable no-use-before-define */
 const addIdForObjects = (array) => {
   if (Array.isArray(array)) {
     array.forEach((element) => {
       if (typeof element === 'object' && element !== null) {
         element._id = mongoose.Types.ObjectId();
-        Object.keys(element).forEach((field) => {
-          if (Array.isArray(element[field])) {
-            addIdForObjects(element[field]);
-          }
-        });
+        checkIfFieldsAreArray(element);
       }
     });
   }
+};
+
+const checkIfFieldsAreArray = (object) => {
+  Object.keys(object).forEach((field) => {
+    if (Array.isArray(object[field])) {
+      addIdForObjects(object[field]);
+    }
+  });
 };
 
 const getFirstFilter = (env) => {
@@ -81,22 +87,35 @@ const getQueryParams = (environment, pathSegments, bodyPayload) => {
 };
 
 const extendEntity = async (event) => {
-  await mongoose.connect(mongodbUri, {
+  const { username, environment } = event.pathParameters;
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+
+  let bodyPayload;
+  try {
+    bodyPayload = JSON.parse(event.body);
+  } catch (error) {
+    return errorResponse(400, 'Invalid body.');
+  }
+  if (pathSegments.length % 2 === 1) {
+    if (!Array.isArray(bodyPayload)) {
+      return errorResponse(400, 'Invalid body.');
+    }
+    addIdForObjects(bodyPayload);
+  } else {
+    if (Array.isArray(bodyPayload)) {
+      return errorResponse(400, 'Invalid body.');
+    }
+    if (!(typeof bodyPayload === 'object' && bodyPayload !== null)) {
+      return errorResponse(400, 'Invalid body.');
+    }
+    bodyPayload._id = mongoose.Types.ObjectId(pathSegments.slice(-1).pop());
+    checkIfFieldsAreArray(bodyPayload);
+  }
+
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
-
-  const { username, environment } = event.pathParameters;
-  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
-  const bodyPayload = JSON.parse(event.body);
-
-  if (pathSegments.length % 2 === 1) {
-    addIdForObjects(bodyPayload);
-  } else {
-    bodyPayload._id = mongoose.Types.ObjectId();
-  }
-
-  addIdForObjects(bodyPayload);
 
   const query = {
     username,
@@ -109,10 +128,15 @@ const extendEntity = async (event) => {
   );
 
   const User = getUserModel();
-  await User.findOneAndUpdate(query, update, options).exec();
+  try {
+    await User.updateOne(query, update, options);
+  } catch (error) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Bad request.');
+  }
 
   await mongoose.connection.close();
-  callback(null, { statusCode: 201 });
+  return successResponse(204);
 };
 
 module.exports = {
