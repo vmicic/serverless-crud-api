@@ -126,6 +126,11 @@ const extendEntity = async (event) => {
     username,
   };
 
+  if (pathSegments.length === 1) {
+    const entitySelector = `environments.${environment}.${pathSegments[0]}`;
+    query[entitySelector] = { $exists: true };
+  }
+
   const { update, options } = getQueryParams(
     environment,
     pathSegments,

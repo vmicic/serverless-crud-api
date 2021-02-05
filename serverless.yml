@@ -88,18 +88,18 @@ functions:
       - httpApi:
           path: /api/{username}/{environment}
           method: POST
+  updateEntity:
+    handler: functions/extendEntities.extendEntity
+    events:
+      - httpApi:
+          path: /api/{username}/{environment}/{any+}
+          method: PUT
   mergeEntity:
     handler: functions/mergeEntity.mergeEntity
     events:
       - httpApi:
           path: /api/{username}/{environment}/{any+}
           method: PATCH
-  extendEntity:
-    handler: functions/extendEntities.extendEntity
-    events:
-      - httpApi:
-          path: /api/{username}/{environment}/{any+}
-          method: PUT
   deleteEntity:
     handler: functions/deleteEntities.deleteEntity
     events:

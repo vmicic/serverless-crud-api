@@ -356,6 +356,31 @@ describe('extend entity tests', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  test('add new entities with entity not existing', async () => {
+    const newPost = [{ text: 'hello' }];
+
+    const event = {
+      path: '/api/ghost/dev/notexisting',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(newPost),
+    };
+
+    const response = await extendEntity(event);
+    expect(response.statusCode).toBe(204);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc.environments[0].dev.notexisting).toBeUndefined();
+    await mongoose.connection.close();
+  });
+
   test('add new entities', async () => {
     const newUsers = [{ name: 'Tommy' }];
 
