@@ -20,9 +20,21 @@ const initializeDb = async () => {
   ).exec();
 
   const users = [
-    { name: 'John', age: 38 },
-    { name: 'Tom', age: 39 },
-    { name: 'Tom', age: 39 },
+    {
+      name: 'John',
+      age: 38,
+      _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+    },
+    {
+      name: 'Tom',
+      age: 39,
+      _id: mongoose.Types.ObjectId('6017d641860f43b553b21602'),
+    },
+    {
+      name: 'Tom',
+      age: 39,
+      _id: mongoose.Types.ObjectId('600c099f8684263f7419818d'),
+    },
   ];
   await User.findOneAndUpdate(
     { username: 'ghost' },

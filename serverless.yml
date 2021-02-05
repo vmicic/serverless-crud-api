@@ -88,6 +88,12 @@ functions:
       - httpApi:
           path: /api/{username}/{environment}
           method: POST
+  mergeEntity:
+    handler: functions/mergeEntity.mergeEntity
+    events:
+      - httpApi:
+          path: /api/{username}/{environment}/{any+}
+          method: PATCH
   extendEntity:
     handler: functions/extendEntities.extendEntity
     events:

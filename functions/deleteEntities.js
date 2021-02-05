@@ -13,19 +13,13 @@ const getFirstFilter = (env) => {
 };
 
 const deleteFieldQuery = (env, pathSegments) => {
-  let arrayFilters = [getFirstFilter(env)];
-
-  const { selector, filters } = getSelectorAndFilters(
-    pathSegments,
-    `environments.$[envId].${env}`,
-  );
-  arrayFilters = arrayFilters.concat(filters);
+  const { selector, filters } = getSelectorAndFilters(pathSegments, env);
 
   const unset = {};
   unset[selector] = '';
 
   const update = { $unset: unset };
-  const options = { arrayFilters };
+  const options = { arrayFilters: filters };
 
   return { update, options };
 };
@@ -35,13 +29,7 @@ const deleteNestedFieldWithQueryParamsQuery = (
   pathSegments,
   queryParams,
 ) => {
-  let arrayFilters = [getFirstFilter(env)];
-
-  const { selector, filters } = getSelectorAndFilters(
-    pathSegments,
-    `environments.$[envId].${env}`,
-  );
-  arrayFilters = arrayFilters.concat(filters);
+  const { selector, filters } = getSelectorAndFilters(pathSegments, env);
 
   const pull = {};
   pull[selector] = {};
@@ -56,7 +44,7 @@ const deleteNestedFieldWithQueryParamsQuery = (
   });
 
   const update = { $pull: pull };
-  const options = { arrayFilters };
+  const options = { arrayFilters: filters };
 
   return { update, options };
 };
@@ -176,19 +164,17 @@ const idsInvalid = (pathSegments) => {
 };
 
 const deleteEntity = async (event) => {
-  await mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
 
   if (idsInvalid(pathSegments)) {
-    await mongoose.connection.close();
     return errorResponse(400, 'Id in path is invalid.');
   }
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 
   const query = {
     username,
@@ -219,4 +205,5 @@ module.exports = {
   deleteFieldQuery,
   deleteNestedFieldWithQueryParamsQuery,
   deleteElementOfArrayQuery,
+  idsInvalid,
 };

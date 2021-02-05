@@ -21,27 +21,25 @@ const addIdForObjects = (array) => {
 };
 
 const createEntity = async (event) => {
-  await mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
   const { username, environment } = event.pathParameters;
   let entity;
 
   try {
     entity = JSON.parse(event.body);
   } catch (error) {
-    await mongoose.connection.close();
     return errorResponse(400, 'Invalid body.');
   }
-
   if (Object.keys(entity).length !== 1) {
-    await mongoose.connection.close();
     return errorResponse(400, 'Invalid body.');
   }
 
   const entityName = Object.keys(entity)[0];
   addIdForObjects(entity[entityName]);
+
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 
   const query = {
     username,

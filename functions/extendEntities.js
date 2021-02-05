@@ -27,10 +27,11 @@ const getFirstFilter = (env) => {
   return filter;
 };
 
-const getSelectorAndFilters = (pathSegments, startSelector) => {
+const getSelectorAndFilters = (pathSegments, env) => {
   const filters = [];
-  let selector = startSelector;
+  filters.push(getFirstFilter(env));
 
+  let selector = `environments.$[envId].${env}`;
   pathSegments.forEach((segment, i) => {
     if (i % 2 === 0) {
       selector = `${selector}.${segment}`;
@@ -50,37 +51,24 @@ const getSelectorAndFilters = (pathSegments, startSelector) => {
 };
 
 const addToExistingEntity = (env, pathSegments, entities) => {
-  let arrayFilters = [getFirstFilter(env)];
-
-  const { selector, filters } = getSelectorAndFilters(
-    pathSegments,
-    `environments.$[envId].${env}`,
-  );
-
-  arrayFilters = arrayFilters.concat(filters);
+  const { selector, filters } = getSelectorAndFilters(pathSegments, env);
 
   const push = {};
   push[selector] = { $each: entities };
 
   const update = { $push: push };
-  const options = { arrayFilters, useFindAndModify: false };
+  const options = { arrayFilters: filters, useFindAndModify: false };
   return { update, options };
 };
 
 const replaceEntity = (env, pathSegments, bodyPayload) => {
-  let arrayFilters = [getFirstFilter(env)];
-
-  const { selector, filters } = getSelectorAndFilters(
-    pathSegments,
-    `environments.$[envId].${env}`,
-  );
-  arrayFilters = arrayFilters.concat(filters);
+  const { selector, filters } = getSelectorAndFilters(pathSegments, env);
 
   const set = {};
   set[selector] = bodyPayload;
 
   const update = { $set: set };
-  const options = { arrayFilters, useFindAndModify: false };
+  const options = { arrayFilters: filters, useFindAndModify: false };
   return { update, options };
 };
 
@@ -92,7 +80,7 @@ const getQueryParams = (environment, pathSegments, bodyPayload) => {
   return replaceEntity(environment, pathSegments, bodyPayload);
 };
 
-const extendEntity = async (event, context, callback) => {
+const extendEntity = async (event) => {
   await mongoose.connect(mongodbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
