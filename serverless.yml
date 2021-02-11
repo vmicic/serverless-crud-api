@@ -14,6 +14,7 @@ plugins:
   - serverless-offline
 
 service: fiverr-api
+useDotenv: true
 # app and org for use with dashboard.serverless.com
 #app: your-app-name
 #org: your-org-name
@@ -67,6 +68,9 @@ functions:
       - httpApi:
           path: /api/{username}
           method: PUT
+      - httpApi:
+          path: /api/{username}
+          method: POST
   getEnv:
     handler: functions/environments.getEnv
     events:

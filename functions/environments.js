@@ -40,7 +40,7 @@ const createEnv = async (event) => {
       'Environment already exists or username not found.',
     );
   }
-  return successResponse(201, event);
+  return successResponse(201);
 };
 
 const getEnv = async (event) => {
