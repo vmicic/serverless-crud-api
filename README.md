@@ -55,7 +55,7 @@ In project root:
 ]'`
 
 - get an entity:  
-`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users' --header 'Content-Type: application/json' --data-raw '{"age": 10}'`
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users'`
 
 - get entity with query params:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users?age=39'`
@@ -65,3 +65,21 @@ In project root:
 
 - get a single entity:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users/6024e08dc57c6aa4cc60afd6'`
+
+- get a entity field:  
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users/6024e76b7a2360aa6522ea01/posts'`
+
+- delete entity:  
+`curl --location --request DELETE 'http://localhost:3000/dev/api/ghost/dev/users'`
+
+- delete entity member:  
+`curl --location --request DELETE 'http://localhost:3000/dev/api/ghost/dev/users/6024e6407a2360aa6522e9f7'`
+
+- delete with query prop:  
+`curl --location --request DELETE 'http://localhost:3000/dev/api/ghost/dev/users?name=Tom'`
+
+- delete with multiple query prop:  
+`curl --location --request DELETE 'http://localhost:3000/dev/api/ghost/dev/users?name=Tom&age=39'`
+
+- delete entity field:  
+`curl --location --request DELETE 'http://localhost:3000/dev/api/ghost/dev/users/6024e7057a2360aa6522e9fd/posts'`
