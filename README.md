@@ -14,7 +14,7 @@ In project root:
 - `npm install`
 - `sls offline`
 
-# requests:
+### requests:
 
 - create environment:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost' --header 'Content-Type: text/plain' --data-raw 'dev'`
