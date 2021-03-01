@@ -3,6 +3,34 @@ const { getUserModel } = require('../models/user.js');
 const { successResponse, errorResponse } = require('../util/responseUtil');
 require('dotenv').config();
 
+const getEnv = async (event) => {
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  const { username, environment } = event.pathParameters;
+
+  const query = { username };
+  const environmentSelector = `environments.${environment}`;
+  query[environmentSelector] = { $exists: true };
+
+  const User = getUserModel();
+  let doc;
+  try {
+    doc = await User.findOne(query, 'environments.$').exec();
+  } catch (error) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Bad request.');
+  }
+  await mongoose.connection.close();
+
+  if (doc == null) {
+    return errorResponse(404, 'Request environment not found.');
+  }
+  return successResponse(200, doc.environments[0][environment]);
+};
+
 const getEnvs = async (event) => {
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
@@ -22,6 +50,7 @@ const getEnvs = async (event) => {
         envs.push(key);
       });
     });
+    await mongoose.connection.close();
     return successResponse(200, { envs });
   } catch (error) {
     await mongoose.connection.close();
@@ -29,4 +58,7 @@ const getEnvs = async (event) => {
   }
 };
 
-module.exports = { getEnvs };
+module.exports = {
+  getEnv,
+  getEnvs,
+};

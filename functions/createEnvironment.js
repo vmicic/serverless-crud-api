@@ -31,7 +31,14 @@ const createEnv = async (event) => {
   };
 
   const User = getUserModel();
-  const result = await User.updateOne(query, update).exec();
+  let result;
+  try {
+    result = await User.updateOne(query, update).exec();
+  } catch (error) {
+    await mongoose.connection.close();
+    return errorResponse(400, 'Bad request.');
+  }
+
   await mongoose.connection.close();
 
   if (result.nModified === 0) {
@@ -43,35 +50,6 @@ const createEnv = async (event) => {
   return successResponse(201);
 };
 
-const getEnv = async (event) => {
-  await mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const { username, environment } = event.pathParameters;
-
-  const query = { username };
-  const environmentSelector = `environments.${environment}`;
-  query[environmentSelector] = { $exists: true };
-
-  const User = getUserModel();
-  let doc;
-  try {
-    doc = await User.findOne(query, 'environments.$').exec();
-  } catch (error) {
-    await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
-  }
-  await mongoose.connection.close();
-
-  if (doc == null) {
-    return errorResponse(404, 'Request environment not found.');
-  }
-  return successResponse(200, doc.environments[0][environment]);
-};
-
 module.exports = {
   createEnv,
-  getEnv,
 };
