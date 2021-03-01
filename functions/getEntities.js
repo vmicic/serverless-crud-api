@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { getUserModel } = require('../models/user.js');
 const { successResponse, errorResponse } = require('../util/responseUtil');
+const { idsInvalid } = require('./deleteEntities');
 require('dotenv').config();
 /* eslint-disable no-underscore-dangle */
 const getProjectQuery = (array, params) => {
@@ -176,8 +177,15 @@ const getDbQuery = (pathSegments, environment, queryParams) => {
   );
 };
 
-const convertToHateos = (doc, segments) => {
+const convertToHateoasDoc = (doc, segments) => {
   const lastEntityName = segments[segments.length - 2];
+  if (
+    doc[0][lastEntityName] === undefined ||
+    doc[0][lastEntityName].length === 0
+  ) {
+    return doc[0];
+  }
+
   const entityPath = `/${segments.join('/')}`;
   const hateosDoc = { ...doc };
   const embeddedObject = { self: entityPath };
@@ -202,6 +210,10 @@ const getEntity = async (event) => {
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
+
+  if (idsInvalid(pathSegments)) {
+    return errorResponse(400, 'Id in path is invalid.');
+  }
 
   const query = getDbQuery(
     [...pathSegments],
@@ -233,8 +245,8 @@ const getEntity = async (event) => {
   }
 
   if (pathSegments.length % 2 === 0) {
-    const hateosDoc = convertToHateos(doc, pathSegments);
-    return successResponse(200, hateosDoc);
+    const hateoasDoc = convertToHateoasDoc(doc, pathSegments);
+    return successResponse(200, hateoasDoc);
   }
   return successResponse(200, doc[0]);
 };
@@ -247,4 +259,5 @@ module.exports = {
   getNestedEntitiesByQueryParamsDbQuery,
   getProjectQuery,
   getDbQuery,
+  convertToHateoasDoc,
 };
