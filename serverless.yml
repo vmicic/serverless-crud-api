@@ -71,6 +71,12 @@ functions:
       - httpApi:
           path: /api/{username}
           method: POST
+  getEnvs:
+    handler: functions/getEnvs.getEnvs
+    events:
+      - httpApi:
+          path: /api/{username}/envs
+          method: GET
   getEnv:
     handler: functions/environments.getEnv
     events:
