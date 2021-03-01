@@ -178,9 +178,19 @@ const getDbQuery = (pathSegments, environment, queryParams) => {
 
 const convertToHateos = (doc, segments) => {
   const lastEntityName = segments[segments.length - 2];
-  const entityPath = '/'.concat(segments.join('/'));
+  const entityPath = `/${segments.join('/')}`;
   const hateosDoc = { ...doc };
-  hateosDoc[0][lastEntityName][0].__embedeed = { self: entityPath };
+  const embeddedObject = { self: entityPath };
+  Object.entries(hateosDoc[0][lastEntityName][0]).forEach((entry) => {
+    const [field, value] = entry;
+    if (Array.isArray(value)) {
+      if (value[0] !== null && typeof value[0] === 'object') {
+        embeddedObject[field] = `${entityPath}/${field}`;
+        delete hateosDoc[0][lastEntityName][0][field];
+      }
+    }
+  });
+  hateosDoc[0][lastEntityName][0].__embedded = embeddedObject;
   return hateosDoc[0];
 };
 
