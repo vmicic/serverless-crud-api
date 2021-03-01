@@ -176,6 +176,14 @@ const getDbQuery = (pathSegments, environment, queryParams) => {
   );
 };
 
+const convertToHateos = (doc, segments) => {
+  const lastEntityName = segments[segments.length - 2];
+  const entityPath = '/'.concat(segments.join('/'));
+  const hateosDoc = { ...doc };
+  hateosDoc[0][lastEntityName][0].__embedeed = { self: entityPath };
+  return hateosDoc[0];
+};
+
 const getEntity = async (event) => {
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
@@ -214,6 +222,10 @@ const getEntity = async (event) => {
     return errorResponse(404, 'Requested entity not found.');
   }
 
+  if (pathSegments.length % 2 === 0) {
+    const hateosDoc = convertToHateos(doc, pathSegments);
+    return successResponse(200, hateosDoc);
+  }
   return successResponse(200, doc[0]);
 };
 
