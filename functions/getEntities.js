@@ -3,7 +3,11 @@ const mongoose = require('mongoose');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { getUserModel } = require('../models/user.js');
 const { successResponse, errorResponse } = require('../util/responseUtil');
-const { idsInvalid } = require('./deleteEntities');
+const { idsInvalid } = require('./extendEntities');
+const {
+  isPagination,
+  getPaginationResponse,
+} = require('./getEntitiesPagination');
 require('dotenv').config();
 /* eslint-disable no-underscore-dangle */
 const getProjectQuery = (array, params) => {
@@ -203,10 +207,6 @@ const convertToHateoasDoc = (doc, segments) => {
 };
 
 const getEntity = async (event) => {
-  await mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
   const { queryStringParameters } = event;
@@ -215,16 +215,26 @@ const getEntity = async (event) => {
     return errorResponse(400, 'Id in path is invalid.');
   }
 
-  const query = getDbQuery(
-    [...pathSegments],
-    environment,
-    queryStringParameters,
-  );
+  if (isPagination(queryStringParameters)) {
+    return getPaginationResponse(
+      username,
+      environment,
+      pathSegments,
+      queryStringParameters,
+    );
+  }
+
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 
   const agreagateQuery = [
     { $match: { username } },
     { $unwind: '$environments' },
-  ].concat(query);
+  ].concat(getDbQuery([...pathSegments], environment, queryStringParameters));
+
+  console.log(agreagateQuery);
 
   const User = getUserModel();
   let doc;

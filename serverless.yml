@@ -71,7 +71,7 @@ functions:
       - httpApi:
           path: /api/{username}
           method: POST
-  getEnvs:
+  getEnvsDocs:
     handler: functions/getEnvironments.getEnvs
     events:
       - httpApi:
