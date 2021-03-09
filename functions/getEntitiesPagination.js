@@ -26,37 +26,36 @@ const isPagination = (queryStringParameters) => {
   return false;
 };
 
-const getEntityDbQuery = (entity, environment) => {
-  const matchObj = {};
-  matchObj[`environments.${environment}`] = { $exists: true };
-
+const getEntityDbQuery = (entity, environment, queryParams) => {
   const queryTemplate = [];
-  queryTemplate.push({ $match: matchObj });
-  queryTemplate.push({
-    $replaceRoot: { newRoot: `$environments.${environment}` },
-  });
+  const match = {};
+  match[`environments.${environment}`] = { $exists: true };
+  queryTemplate.push({ $match: match });
 
   const project = {};
-  project[entity] = 1;
+  const entityFullPath = `environments.${environment}.${entity}`;
+  project[entityFullPath] = 1;
   project._id = 0;
-  project.sizeOfArray = { $size: `$${entity}` };
+  project.sizeOfArray = { $size: `$${entityFullPath}` };
   queryTemplate.push({
     $project: project,
   });
+
+  queryTemplate.push({ $unwind: `$${entityFullPath}` });
+
+  const page = +queryParams.page;
+  const perPage = +queryParams.per_page;
+  const skip = (page - 1) * perPage;
+  queryTemplate.push({ $skip: skip });
+
+  queryTemplate.push({ $limit: perPage });
 
   return queryTemplate;
 };
 
 const getDbQuery = (pathSegments, environment, queryParams) => {
   if (pathSegments.length === 1) {
-    if (queryParams !== null) {
-      //   return getEntityByQueryParamsDbQuery(
-      //     pathSegments[0],
-      //     environment,
-      //     queryParams,
-      //   );
-    }
-    return getEntityDbQuery(pathSegments[0], environment);
+    return getEntityDbQuery(pathSegments[0], environment, queryParams);
   }
   if (pathSegments.length % 2 === 0) {
     // return getEntityByIdDbQuery(pathSegments, environment);
@@ -70,7 +69,7 @@ const getDbQuery = (pathSegments, environment, queryParams) => {
 };
 
 const convertToPaginationResponse = (doc, pathSegments, queryParams) => {
-  const paginationDoc = doc[0];
+  const paginationDoc = doc;
   const page = +queryParams.page;
   const perPage = +queryParams.per_page;
 
@@ -79,7 +78,7 @@ const convertToPaginationResponse = (doc, pathSegments, queryParams) => {
   const entityPath = `/${pathSegments.join('/')}`;
   embedded.self = `${entityPath}${queryString}`;
 
-  const sizeOfArray = +doc[0].sizeOfArray;
+  const { sizeOfArray } = doc;
   let pages;
   if (sizeOfArray % perPage === 0) {
     pages = sizeOfArray / perPage;
@@ -100,16 +99,37 @@ const convertToPaginationResponse = (doc, pathSegments, queryParams) => {
 
   embedded.last = `${entityPath}?page=${pages}&per_page=${perPage}`;
 
-  embedded.ammount = pages;
+  const entity = pathSegments.slice(-1)[0];
+  embedded.ammount = doc[entity].length;
 
   embedded.current_page = page;
-  embedded.total = doc[0].sizeOfArray;
+  embedded.total = sizeOfArray;
   embedded.per_page = perPage;
 
   paginationDoc.__embedded = embedded;
   delete paginationDoc.sizeOfArray;
 
   return paginationDoc;
+};
+
+const replaceRoot = (doc, pathSegments) => {
+  if (pathSegments.length === 1) {
+    const sizeOfArray = +doc[0].sizeOfArray;
+    const newRootDoc = {};
+    const entity = pathSegments[0];
+    newRootDoc[entity] = [];
+    doc.forEach((document) => {
+      newRootDoc[entity] = [
+        ...newRootDoc[entity],
+        document.environments.dev.users,
+      ];
+    });
+    newRootDoc.sizeOfArray = sizeOfArray;
+
+    return newRootDoc;
+  }
+
+  return doc;
 };
 
 const getPaginationResponse = async (event) => {
@@ -135,8 +155,14 @@ const getPaginationResponse = async (event) => {
     return errorResponse(400, 'Bad request.');
   }
   await mongoose.connection.close();
+
+  if (doc.length === 0) {
+    return successResponse(400, "Requested page doesn't exist.");
+  }
+
+  const newRootDoc = replaceRoot(doc, pathSegments);
   const paginationResponse = convertToPaginationResponse(
-    doc,
+    newRootDoc,
     pathSegments,
     queryStringParameters,
   );
