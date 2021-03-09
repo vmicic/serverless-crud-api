@@ -1,3 +1,4 @@
+/* eslint-disable operator-linebreak */
 /* eslint-disable no-underscore-dangle */
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
@@ -5,7 +6,11 @@ const { successResponse, errorResponse } = require('../util/responseUtil');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 require('dotenv').config();
 
-const isPagination = (queryStringParameters) => {
+const isPagination = (pathSegments, queryStringParameters) => {
+  if (pathSegments.length % 2 !== 1) {
+    return false;
+  }
+
   if (queryStringParameters === null || queryStringParameters === undefined) {
     return false;
   }
@@ -53,19 +58,14 @@ const getEntityDbQuery = (entity, environment, queryParams) => {
   return queryTemplate;
 };
 
+const getNestedEntityDbQuery = (pathSegments, environment, queryParams) => {};
+
 const getDbQuery = (pathSegments, environment, queryParams) => {
   if (pathSegments.length === 1) {
     return getEntityDbQuery(pathSegments[0], environment, queryParams);
   }
-  if (pathSegments.length % 2 === 0) {
-    // return getEntityByIdDbQuery(pathSegments, environment);
-  }
 
-  //   return getNestedEntitiesByQueryParamsDbQuery(
-  //     pathSegments,
-  //     environment,
-  //     queryParams,
-  //   );
+  return getNestedEntityDbQuery(pathSegments, environment, queryParams);
 };
 
 const convertToPaginationResponse = (doc, pathSegments, queryParams) => {
@@ -146,15 +146,53 @@ const getPaginationResponse = async (event) => {
     getDbQuery(pathSegments, environment, queryStringParameters),
   );
 
+  // [
+  //   { '$match': { username: 'ghost' } },
+  //   { '$unwind': '$environments' },
+  //   { '$match': { 'environments.dev': [Object] } },
+  //   {
+  //     '$project': { 'environments.dev.users': 1, _id: 0, sizeOfArray: [Object] }
+  //   },
+  //   { '$unwind': '$environments.dev.users' },
+  //   { '$skip': 0 },
+  //   { '$limit': 1 }
+  // ]
+
+  const tempQuery = [
+    { $match: { username: 'ghost' } },
+    { $unwind: '$environments' },
+    { $unwind: '$environments.dev.users' },
+    {
+      $match: {
+        'environments.dev.users._id': mongoose.Types.ObjectId(
+          '604781c71df8723f0c36f4b9',
+        ),
+      },
+    },
+    {
+      $project: {
+        'environments.dev.users.comments': 1,
+        _id: 0,
+        sizeOfArray: { $size: '$environments.dev.users.comments' },
+      },
+    },
+    { $unwind: '$environments.dev.users.comments' },
+    { $skip: 0 },
+    { $limit: 1 },
+  ];
+
   const User = getUserModel();
   let doc;
   try {
-    doc = await User.aggregate(query).exec();
+    doc = await User.aggregate(tempQuery).exec();
   } catch (error) {
     await mongoose.connection.close();
     return errorResponse(400, 'Bad request.');
   }
   await mongoose.connection.close();
+
+  console.log(doc);
+  return successResponse(200, 'gj');
 
   if (doc.length === 0) {
     return successResponse(400, "Requested page doesn't exist.");

@@ -215,7 +215,7 @@ const getEntity = async (event) => {
     return errorResponse(400, 'Id in path is invalid.');
   }
 
-  if (isPagination(queryStringParameters)) {
+  if (isPagination(pathSegments, queryStringParameters)) {
     return getPaginationResponse(event);
   }
 
@@ -228,6 +228,8 @@ const getEntity = async (event) => {
     { $match: { username } },
     { $unwind: '$environments' },
   ].concat(getDbQuery([...pathSegments], environment, queryStringParameters));
+
+  console.log(agreagateQuery);
 
   const User = getUserModel();
   let doc;
