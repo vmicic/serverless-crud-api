@@ -1,6 +1,7 @@
 /* eslint-disable operator-linebreak */
 /* eslint-disable no-underscore-dangle */
 const mongoose = require('mongoose');
+const _ = require('lodash');
 const { getUserModel } = require('../models/user.js');
 const { successResponse, errorResponse } = require('../util/responseUtil');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
@@ -52,13 +53,48 @@ const getEntityDbQuery = (entity, environment, queryParams) => {
   const perPage = +queryParams.per_page;
   const skip = (page - 1) * perPage;
   queryTemplate.push({ $skip: skip });
-
   queryTemplate.push({ $limit: perPage });
 
   return queryTemplate;
 };
 
-const getNestedEntityDbQuery = (pathSegments, environment, queryParams) => {};
+const getNestedEntityDbQuery = (pathSegments, environment, queryParams) => {
+  const queryTemplate = [];
+  let selector = `environments.${environment}`;
+  pathSegments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      if (i + 1 !== pathSegments.length) {
+        selector = `${selector}.${segment}`;
+        queryTemplate.push({ $unwind: `$${selector}` });
+      }
+      // if at id segment
+    } else if (i % 2 === 1) {
+      const match = {};
+      match[`${selector}._id`] = mongoose.Types.ObjectId(segment);
+      queryTemplate.push({ $match: match });
+      queryTemplate.push();
+    }
+  });
+
+  const lastSegment = pathSegments.slice(-1).pop();
+  const entityFullPath = `${selector}.${lastSegment}`;
+
+  const project = {};
+  project[entityFullPath] = 1;
+  project._id = 0;
+  project.sizeOfArray = { $size: `$${entityFullPath}` };
+  queryTemplate.push({ $project: project });
+
+  queryTemplate.push({ $unwind: `$${entityFullPath}` });
+
+  const page = +queryParams.page;
+  const perPage = +queryParams.per_page;
+  const skip = (page - 1) * perPage;
+  queryTemplate.push({ $skip: skip });
+  queryTemplate.push({ $limit: perPage });
+
+  return queryTemplate;
+};
 
 const getDbQuery = (pathSegments, environment, queryParams) => {
   if (pathSegments.length === 1) {
@@ -112,16 +148,17 @@ const convertToPaginationResponse = (doc, pathSegments, queryParams) => {
   return paginationDoc;
 };
 
-const replaceRoot = (doc, pathSegments) => {
+const replaceRoot = (doc, pathSegments, env) => {
+  const sizeOfArray = +doc[0].sizeOfArray;
+  const newRootDoc = {};
+  const entity = pathSegments.slice(-1).pop();
+  newRootDoc[entity] = [];
+
   if (pathSegments.length === 1) {
-    const sizeOfArray = +doc[0].sizeOfArray;
-    const newRootDoc = {};
-    const entity = pathSegments[0];
-    newRootDoc[entity] = [];
-    doc.forEach((document) => {
+    doc.forEach((singleEntity) => {
       newRootDoc[entity] = [
         ...newRootDoc[entity],
-        document.environments.dev.users,
+        singleEntity.environments[env][entity],
       ];
     });
     newRootDoc.sizeOfArray = sizeOfArray;
@@ -129,7 +166,26 @@ const replaceRoot = (doc, pathSegments) => {
     return newRootDoc;
   }
 
-  return doc;
+  let entityFullPath = '';
+  pathSegments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      if (entityFullPath === '') {
+        entityFullPath = segment;
+      } else {
+        entityFullPath = `${entityFullPath}.${segment}`;
+      }
+    }
+  });
+
+  doc.forEach((singleEntity) => {
+    newRootDoc[entity] = [
+      ...newRootDoc[entity],
+      _.get(singleEntity, `environments.${env}.${entityFullPath}`),
+    ];
+  });
+
+  newRootDoc.sizeOfArray = sizeOfArray;
+  return newRootDoc;
 };
 
 const getPaginationResponse = async (event) => {
@@ -146,59 +202,21 @@ const getPaginationResponse = async (event) => {
     getDbQuery(pathSegments, environment, queryStringParameters),
   );
 
-  // [
-  //   { '$match': { username: 'ghost' } },
-  //   { '$unwind': '$environments' },
-  //   { '$match': { 'environments.dev': [Object] } },
-  //   {
-  //     '$project': { 'environments.dev.users': 1, _id: 0, sizeOfArray: [Object] }
-  //   },
-  //   { '$unwind': '$environments.dev.users' },
-  //   { '$skip': 0 },
-  //   { '$limit': 1 }
-  // ]
-
-  const tempQuery = [
-    { $match: { username: 'ghost' } },
-    { $unwind: '$environments' },
-    { $unwind: '$environments.dev.users' },
-    {
-      $match: {
-        'environments.dev.users._id': mongoose.Types.ObjectId(
-          '604781c71df8723f0c36f4b9',
-        ),
-      },
-    },
-    {
-      $project: {
-        'environments.dev.users.comments': 1,
-        _id: 0,
-        sizeOfArray: { $size: '$environments.dev.users.comments' },
-      },
-    },
-    { $unwind: '$environments.dev.users.comments' },
-    { $skip: 0 },
-    { $limit: 1 },
-  ];
-
   const User = getUserModel();
   let doc;
   try {
-    doc = await User.aggregate(tempQuery).exec();
+    doc = await User.aggregate(query).exec();
   } catch (error) {
     await mongoose.connection.close();
     return errorResponse(400, 'Bad request.');
   }
   await mongoose.connection.close();
 
-  console.log(doc);
-  return successResponse(200, 'gj');
-
   if (doc.length === 0) {
     return successResponse(400, "Requested page doesn't exist.");
   }
 
-  const newRootDoc = replaceRoot(doc, pathSegments);
+  const newRootDoc = replaceRoot(doc, pathSegments, environment);
   const paginationResponse = convertToPaginationResponse(
     newRootDoc,
     pathSegments,

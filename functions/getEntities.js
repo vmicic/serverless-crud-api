@@ -229,8 +229,6 @@ const getEntity = async (event) => {
     { $unwind: '$environments' },
   ].concat(getDbQuery([...pathSegments], environment, queryStringParameters));
 
-  console.log(agreagateQuery);
-
   const User = getUserModel();
   let doc;
   try {
