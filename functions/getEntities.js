@@ -216,12 +216,7 @@ const getEntity = async (event) => {
   }
 
   if (isPagination(queryStringParameters)) {
-    return getPaginationResponse(
-      username,
-      environment,
-      pathSegments,
-      queryStringParameters,
-    );
+    return getPaginationResponse(event);
   }
 
   await mongoose.connect(process.env.MONGODB_URI, {
@@ -233,8 +228,6 @@ const getEntity = async (event) => {
     { $match: { username } },
     { $unwind: '$environments' },
   ].concat(getDbQuery([...pathSegments], environment, queryStringParameters));
-
-  console.log(agreagateQuery);
 
   const User = getUserModel();
   let doc;
