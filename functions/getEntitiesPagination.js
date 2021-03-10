@@ -104,6 +104,46 @@ const getDbQuery = (pathSegments, environment, queryParams) => {
   return getNestedEntityDbQuery(pathSegments, environment, queryParams);
 };
 
+const replaceRoot = (doc, pathSegments, env) => {
+  const sizeOfArray = +doc[0].sizeOfArray;
+  const newRootDoc = {};
+  const entity = pathSegments.slice(-1).pop();
+  newRootDoc[entity] = [];
+
+  if (pathSegments.length === 1) {
+    doc.forEach((singleEntity) => {
+      newRootDoc[entity] = [
+        ...newRootDoc[entity],
+        singleEntity.environments[env][entity],
+      ];
+    });
+    newRootDoc.sizeOfArray = sizeOfArray;
+
+    return newRootDoc;
+  }
+
+  let entityFullPath = '';
+  pathSegments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      if (entityFullPath === '') {
+        entityFullPath = segment;
+      } else {
+        entityFullPath = `${entityFullPath}.${segment}`;
+      }
+    }
+  });
+
+  doc.forEach((singleEntity) => {
+    newRootDoc[entity] = [
+      ...newRootDoc[entity],
+      _.get(singleEntity, `environments.${env}.${entityFullPath}`),
+    ];
+  });
+
+  newRootDoc.sizeOfArray = sizeOfArray;
+  return newRootDoc;
+};
+
 const convertToPaginationResponse = (doc, pathSegments, queryParams) => {
   const paginationDoc = doc;
   const page = +queryParams.page;
@@ -148,46 +188,6 @@ const convertToPaginationResponse = (doc, pathSegments, queryParams) => {
   return paginationDoc;
 };
 
-const replaceRoot = (doc, pathSegments, env) => {
-  const sizeOfArray = +doc[0].sizeOfArray;
-  const newRootDoc = {};
-  const entity = pathSegments.slice(-1).pop();
-  newRootDoc[entity] = [];
-
-  if (pathSegments.length === 1) {
-    doc.forEach((singleEntity) => {
-      newRootDoc[entity] = [
-        ...newRootDoc[entity],
-        singleEntity.environments[env][entity],
-      ];
-    });
-    newRootDoc.sizeOfArray = sizeOfArray;
-
-    return newRootDoc;
-  }
-
-  let entityFullPath = '';
-  pathSegments.forEach((segment, i) => {
-    if (i % 2 === 0) {
-      if (entityFullPath === '') {
-        entityFullPath = segment;
-      } else {
-        entityFullPath = `${entityFullPath}.${segment}`;
-      }
-    }
-  });
-
-  doc.forEach((singleEntity) => {
-    newRootDoc[entity] = [
-      ...newRootDoc[entity],
-      _.get(singleEntity, `environments.${env}.${entityFullPath}`),
-    ];
-  });
-
-  newRootDoc.sizeOfArray = sizeOfArray;
-  return newRootDoc;
-};
-
 const getPaginationResponse = async (event) => {
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
@@ -229,4 +229,9 @@ const getPaginationResponse = async (event) => {
 module.exports = {
   isPagination,
   getPaginationResponse,
+  getEntityDbQuery,
+  getNestedEntityDbQuery,
+  getDbQuery,
+  convertToPaginationResponse,
+  replaceRoot,
 };
