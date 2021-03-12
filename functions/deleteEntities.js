@@ -150,19 +150,6 @@ const getQueryParams = (env, pathSegments, queryParams) => {
   return deleteElementOfArrayQuery(env, pathSegments);
 };
 
-const idsInvalid = (pathSegments) => {
-  try {
-    pathSegments.forEach((segment, i) => {
-      if (i % 2 === 1) {
-        mongoose.Types.ObjectId(segment);
-      }
-    });
-  } catch (error) {
-    return true;
-  }
-  return false;
-};
-
 const deleteEntity = async (event) => {
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
