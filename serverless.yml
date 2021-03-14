@@ -87,7 +87,7 @@ functions:
     handler: functions/getEntitiesDocs.getEntitiesDocs
     events:
       - httpApi:
-          path: /api/{username}/{environment}/entities
+          path: /api/{username}/{environment}/entities/{any+}
           method: GET
   getEntity:
     handler: functions/getEntities.getEntity
