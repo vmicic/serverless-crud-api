@@ -117,6 +117,7 @@ curl -L localhost:3000/ghost/{env}/entities
 }
 ```
 
+
 To get `settings` list you would send following request:
 
 ```sh

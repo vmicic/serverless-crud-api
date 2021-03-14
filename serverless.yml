@@ -83,6 +83,12 @@ functions:
       - httpApi:
           path: /api/{username}/{environment}
           method: GET
+  getEntityDocs:
+    handler: functions/getEntitiesDocs.getEntitiesDocs
+    events:
+      - httpApi:
+          path: /api/{username}/{environment}/entities
+          method: GET
   getEntity:
     handler: functions/getEntities.getEntity
     events:
