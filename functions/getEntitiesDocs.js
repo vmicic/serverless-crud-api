@@ -4,40 +4,8 @@ const { getUserModel } = require('../models/user.js');
 const { successResponse, errorResponse } = require('../util/responseUtil');
 require('dotenv').config();
 
-var structure = [];
-
-// const getAllSubEntities = (entities) => {
-//   let isObjectInArray = false;
-//   let subEntities = [];
-
-//   entities.forEach((entity) => {
-//     if (typeof entity === 'object' && entity !== null) {
-//       isObjectInArray = true;
-//       Object.entries(entity).forEach((entry) => {
-//         const [key, value] = entry;
-//         if (Array.isArray(value)) {
-//           const {
-//             isObjectInArray: isObjectInSubArray,
-//             subEntities: subEntitiesInSu bArray,
-//           } = getAllSubEntities(value);
-
-//           if (isObjectInSubArray) {
-//             console.log(`${key} has some objects in array`);
-//             console.log(`Subentities of ${key}`);
-//             console.log(subEntitiesInSubArray);
-//             if (subEntitiesInSubArray.length === 0) {
-//               subEntities = [...subEntities, key];
-//             }
-//           }
-//         }
-//       });
-//     }
-//   });
-
-//   return { isObjectInArray, subEntities };
-// };
-
-// svaki el => check if obj => svaki property => if array => recursive
+const structure = {};
+const responseStructureGlobal = { entities: [] };
 
 const updateStructure = (entities, path) => {
   entities.forEach((entity) => {
@@ -66,24 +34,29 @@ const getEntitiesStructure = (entities) => {
   return structure;
 };
 
-// {
-//   entities: [
-//     { users: ['comments', 'orders'] },
-//     {
-//       repos: [
-//         'issues',
-//         'discussions',
-//         'commits',
-//         { settings: ['actions', 'webhooks'] },
-//       ],
-//     },
-//   ],
-// }
+const generateResponseStructure = (entry, path, entityIndex) => {
+  const [entityName, entityValue] = entry;
+  if (_.isEmpty(entityValue)) {
+    const subEntities = _.get(responseStructureGlobal, path);
+    _.set(responseStructureGlobal, path, [...subEntities, entityName]);
+  } else {
+    const subEntities = _.get(responseStructureGlobal, path);
+    const subEntity = {};
+    subEntity[`${entityName}`] = [];
+    _.set(responseStructureGlobal, path, [...subEntities, subEntity]);
+    Object.entries(entityValue).forEach((subEntry, subEntityIndex) => {
+      const newPath = `${path}[${entityIndex}].${entityName}`;
+      generateResponseStructure(subEntry, newPath, subEntityIndex);
+    });
+  }
+};
 
-const convertStructureToResponse = (structure) => {
-  const response = { entities: [] };
+const convertStructureToResponse = (rawStructure) => {
+  Object.entries(rawStructure).forEach((entry, entityIndex) => {
+    generateResponseStructure(entry, 'entities', entityIndex);
+  });
 
-  return structure;
+  return responseStructureGlobal;
 };
 
 const getEntitiesDocs = async (event) => {
