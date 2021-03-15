@@ -3,8 +3,6 @@ const {
   convertStructureToResponse,
   getEntitiesDocs,
   getEntitiesStructure,
-  getResponse,
-  getResponseStructure,
 } = require('../functions/getEntitiesDocs');
 const { getUserModel } = require('../models/user');
 require('dotenv').config();
