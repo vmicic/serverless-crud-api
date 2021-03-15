@@ -20,6 +20,20 @@ const addIdForObjects = (array) => {
   }
 };
 
+const getUpdate = (env, entityName, entity) => {
+  const set = {};
+  set[`environments.$[envId].${env}.${entityName}`] = entity[entityName];
+  return { $set: set };
+};
+
+const getOptions = (env) => {
+  const filter = {};
+  filter[`envId.${env}`] = { $exists: true };
+  const arrayFilters = [];
+  arrayFilters.push(filter);
+  return { arrayFilters, useFindAndModify: false };
+};
+
 const createEntity = async (event) => {
   const { username, environment } = event.pathParameters;
   let entity;
@@ -36,29 +50,14 @@ const createEntity = async (event) => {
   const entityName = Object.keys(entity)[0];
   addIdForObjects(entity[entityName]);
 
+  const query = { username };
+  const update = getUpdate(environment, entityName, entity);
+  const options = getOptions(environment);
+
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
-
-  const query = {
-    username,
-  };
-
-  const setObject = {};
-  // eslint-disable-next-line operator-linebreak
-  setObject[`environments.$[envId].${environment}.${entityName}`] =
-    entity[entityName];
-  const update = { $set: setObject };
-
-  const filter = {};
-  filter[`envId.${environment}`] = { $exists: true };
-  const arrayFilters = [];
-  arrayFilters.push(filter);
-  const options = {
-    arrayFilters,
-    useFindAndModify: false,
-  };
 
   const User = getUserModel();
   let result;

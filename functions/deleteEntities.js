@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
-const { getSelectorAndFilters } = require('./extendEntities');
+const { getSelectorAndFilters, idsInvalid } = require('./extendEntities');
 const { successResponse, errorResponse } = require('../util/responseUtil');
 require('dotenv').config();
 
@@ -148,19 +148,6 @@ const getQueryParams = (env, pathSegments, queryParams) => {
   }
 
   return deleteElementOfArrayQuery(env, pathSegments);
-};
-
-const idsInvalid = (pathSegments) => {
-  try {
-    pathSegments.forEach((segment, i) => {
-      if (i % 2 === 1) {
-        mongoose.Types.ObjectId(segment);
-      }
-    });
-  } catch (error) {
-    return true;
-  }
-  return false;
 };
 
 const deleteEntity = async (event) => {

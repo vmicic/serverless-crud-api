@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { successResponse, errorResponse } = require('../util/responseUtil');
-const { idsInvalid } = require('./deleteEntities');
 require('dotenv').config();
 
 /* eslint-disable no-param-reassign */
@@ -87,6 +86,19 @@ const getQueryParams = (env, pathSegments, bodyPayload) => {
   return replaceEntityQuery(env, pathSegments, bodyPayload);
 };
 
+const idsInvalid = (pathSegments) => {
+  try {
+    pathSegments.forEach((segment, i) => {
+      if (i % 2 === 1) {
+        mongoose.Types.ObjectId(segment);
+      }
+    });
+  } catch (error) {
+    return true;
+  }
+  return false;
+};
+
 const extendEntity = async (event) => {
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
@@ -156,4 +168,5 @@ module.exports = {
   addIdForArrayInField,
   replaceEntityQuery,
   addToExistingEntityQuery,
+  idsInvalid,
 };

@@ -63,7 +63,7 @@ provider:
 
 functions:
   createEnv:
-    handler: functions/environments.createEnv
+    handler: functions/createEnvironment.createEnv
     events:
       - httpApi:
           path: /api/{username}
@@ -71,11 +71,23 @@ functions:
       - httpApi:
           path: /api/{username}
           method: POST
+  getEnvsDocs:
+    handler: functions/getEnvironments.getEnvs
+    events:
+      - httpApi:
+          path: /api/{username}/envs
+          method: GET
   getEnv:
-    handler: functions/environments.getEnv
+    handler: functions/getEnvironments.getEnv
     events:
       - httpApi:
           path: /api/{username}/{environment}
+          method: GET
+  getEntityDocs:
+    handler: functions/getEntitiesDocs.getEntitiesDocs
+    events:
+      - httpApi:
+          path: /api/{username}/{environment}/entities/{any+}
           method: GET
   getEntity:
     handler: functions/getEntities.getEntity

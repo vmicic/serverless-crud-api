@@ -7,9 +7,100 @@ const {
   getNestedEntitiesByQueryParamsDbQuery,
   getDbQuery,
   getEntity,
+  convertToHateoasDoc,
 } = require('../functions/getEntities');
 const { getUserModel } = require('../models/user');
 require('dotenv').config();
+
+test('get hateos doc with no nested entities', () => {
+  const doc = [
+    {
+      users: [
+        {
+          name: 'John',
+          age: 38,
+          _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+        },
+      ],
+    },
+  ];
+  const pathSegments = ['users', '6017d641860f43b553b21603'];
+  const hateosDoc = convertToHateoasDoc(doc, pathSegments);
+  expect(hateosDoc).toEqual({
+    users: [
+      {
+        name: 'John',
+        age: 38,
+        _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+        __embedded: {
+          self: '/users/6017d641860f43b553b21603',
+        },
+      },
+    ],
+  });
+});
+
+test('get hateos doc with nested entities', () => {
+  const doc = [
+    {
+      users: [
+        {
+          name: 'John',
+          age: 38,
+          _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+          comments: [{ text: 'hello' }],
+        },
+      ],
+    },
+  ];
+  const pathSegments = ['users', '6017d641860f43b553b21603'];
+  const hateosDoc = convertToHateoasDoc(doc, pathSegments);
+  expect(hateosDoc).toEqual({
+    users: [
+      {
+        name: 'John',
+        age: 38,
+        _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+        __embedded: {
+          self: '/users/6017d641860f43b553b21603',
+          comments: '/users/6017d641860f43b553b21603/comments',
+        },
+      },
+    ],
+  });
+});
+
+test('get hateos doc with nested entities and array with primitive types', () => {
+  const doc = [
+    {
+      users: [
+        {
+          name: 'John',
+          age: 38,
+          _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+          comments: [{ text: 'hello' }],
+          ratings: [5, 4, 2, 1, 5, 7],
+        },
+      ],
+    },
+  ];
+  const pathSegments = ['users', '6017d641860f43b553b21603'];
+  const hateosDoc = convertToHateoasDoc(doc, pathSegments);
+  expect(hateosDoc).toEqual({
+    users: [
+      {
+        name: 'John',
+        age: 38,
+        _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+        ratings: [5, 4, 2, 1, 5, 7],
+        __embedded: {
+          self: '/users/6017d641860f43b553b21603',
+          comments: '/users/6017d641860f43b553b21603/comments',
+        },
+      },
+    ],
+  });
+});
 
 test('get project query single query param', () => {
   const selector = 'environments.dev.users';
@@ -633,6 +724,9 @@ describe('get entity tests', () => {
           name: 'Tom',
           age: 39,
           _id: '6017d641860f43b553b21602',
+          __embedded: {
+            self: '/users/6017d641860f43b553b21602',
+          },
         },
       ],
     });
@@ -763,17 +857,12 @@ describe('get entity tests', () => {
         {
           text: 'hello my name is John',
           _id: '601a91476e16940587282479',
-          comments: [
-            {
-              text: 'Nice to meet you',
-              _id: '601a91476e1694058728247a',
-              rating: 5,
-            },
-            {
-              _id: '601a91476e1694058728247d',
-              rating: 4,
-            },
-          ],
+          __embedded: {
+            comments:
+              '/users/6017d641860f43b553b21603/posts/601a91476e16940587282479/comments',
+            self:
+              '/users/6017d641860f43b553b21603/posts/601a91476e16940587282479',
+          },
         },
       ],
     });

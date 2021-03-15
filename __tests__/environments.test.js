@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user');
-const { createEnv, getEnv } = require('../functions/environments');
+const { getEnv } = require('../functions/getEnvironments');
+const { createEnv } = require('../functions/createEnvironment');
 require('dotenv').config();
 
 const initializeDb = async () => {
