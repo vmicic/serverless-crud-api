@@ -5,10 +5,7 @@ const { successResponse, errorResponse } = require('../util/responseUtil');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 require('dotenv').config();
 
-const structure = {};
-const responseStructureGlobal = { entities: [] };
-
-const updateStructure = (entities, path) => {
+const updateStructure = (entities, path, structure) => {
   entities.forEach((entity) => {
     if (typeof entity === 'object' && entity !== null) {
       // if entity wasn't added to structure
@@ -21,7 +18,7 @@ const updateStructure = (entities, path) => {
         const [key, value] = entry;
         if (Array.isArray(value)) {
           const newPath = `${path}.${key}`;
-          updateStructure(value, newPath);
+          updateStructure(value, newPath, structure);
         }
       });
     }
@@ -29,39 +26,46 @@ const updateStructure = (entities, path) => {
 };
 
 const getEntitiesStructure = (entities) => {
+  const structure = {};
   Object.entries(entities).forEach((entry) => {
     const [key, value] = entry;
-    updateStructure(value, key);
+    updateStructure(value, key, structure);
   });
 
   return structure;
 };
 
-const getResponseStructure = (entity, path, entityIndex) => {
+const getResponseStructure = (entity, path, entityIndex, responseStructure) => {
   const [entityName, entityValue] = entity;
   // if entity doesn't have sub entities, only add it to array
   if (_.isEmpty(entityValue)) {
-    const subEntities = _.get(responseStructureGlobal, path);
-    _.set(responseStructureGlobal, path, [...subEntities, entityName]);
+    const subEntities = _.get(responseStructure, path);
+    _.set(responseStructure, path, [...subEntities, entityName]);
   } else {
     // if entity has sub entities add it as object, and add all of it's sub entities
-    const subEntities = _.get(responseStructureGlobal, path);
+    const subEntities = _.get(responseStructure, path);
     const subEntity = {};
     subEntity[`${entityName}`] = [];
-    _.set(responseStructureGlobal, path, [...subEntities, subEntity]);
+    _.set(responseStructure, path, [...subEntities, subEntity]);
     Object.entries(entityValue).forEach((subEntry, subEntityIndex) => {
       const newPath = `${path}[${entityIndex}].${entityName}`;
-      getResponseStructure(subEntry, newPath, subEntityIndex);
+      getResponseStructure(
+        subEntry,
+        newPath,
+        subEntityIndex,
+        responseStructure,
+      );
     });
   }
 };
 
 const convertStructureToResponse = (rawStructure) => {
+  const responseStructure = { entities: [] };
   Object.entries(rawStructure).forEach((entry, entityIndex) => {
-    getResponseStructure(entry, 'entities', entityIndex);
+    getResponseStructure(entry, 'entities', entityIndex, responseStructure);
   });
 
-  return responseStructureGlobal;
+  return responseStructure;
 };
 
 const getResponse = (entitiesStructure, path) => {
@@ -111,4 +115,8 @@ const getEntitiesDocs = async (event) => {
 
 module.exports = {
   getEntitiesDocs,
+  getResponse,
+  convertStructureToResponse,
+  getResponseStructure,
+  getEntitiesStructure,
 };
