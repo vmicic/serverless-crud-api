@@ -14,7 +14,7 @@ In project root:
 - `npm install`
 - `sls offline`
 
-#### create/update requests:
+### create/update requests:
 
 - create environment:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost' --header 'Content-Type: text/plain' --data-raw 'dev'`
@@ -52,13 +52,25 @@ In project root:
 ]'`
 
 
-#### get requests:
+### get requests:
+
+- get all environments:
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/envs'`
 
 - get environment:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev'`
 
+- get all entities in environment:
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/entities'`
+
+- get nested entities in environment:
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/entities/users/comments'`
+
 - get an entity:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users'`
+
+- get an entity with pagination:
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users?page=1&per_page=3'`
 
 - get entity with query params:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users?age=39'`
@@ -73,7 +85,7 @@ In project root:
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users/6024e76b7a2360aa6522ea01/posts'`
 
 
-#### delete requests:
+### delete requests:
 
 - delete entity:  
 `curl --location --request DELETE 'http://localhost:3000/dev/api/ghost/dev/users'`
