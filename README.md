@@ -54,22 +54,22 @@ In project root:
 
 ### get requests:
 
-- get all environments:
+- get all environments:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/envs'`
 
 - get environment:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev'`
 
-- get all entities in environment:
+- get all entities in environment:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/entities'`
 
-- get nested entities in environment:
+- get nested entities in environment:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/entities/users/comments'`
 
 - get an entity:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users'`
 
-- get an entity with pagination:
+- get an entity with pagination:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users?page=1&per_page=3'`
 
 - get entity with query params:  
