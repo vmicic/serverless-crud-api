@@ -14,14 +14,10 @@ In project root:
 - `npm install`
 - `sls offline`
 
-### requests:
+#### create/update requests:
 
 - create environment:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost' --header 'Content-Type: text/plain' --data-raw 'dev'`
-
-
-- get environment:  
-`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev'`
 
 - create entity:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev' --header 'Content-Type: application/json' --data-raw '{
@@ -39,6 +35,7 @@ In project root:
     "name": "John"
 }'`
 
+
 - update entity with merge:  
 `curl --location --request PATCH 'http://localhost:3000/dev/api/ghost/dev/users/6024e2ef7a2360aa6522e9ef' --header 'Content-Type: application/json' --data-raw '{"lastname": "Grant"}'`
 
@@ -54,6 +51,12 @@ In project root:
     }
 ]'`
 
+
+#### get requests:
+
+- get environment:  
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev'`
+
 - get an entity:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users'`
 
@@ -68,6 +71,9 @@ In project root:
 
 - get a entity field:  
 `curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users/6024e76b7a2360aa6522ea01/posts'`
+
+
+#### delete requests:
 
 - delete entity:  
 `curl --location --request DELETE 'http://localhost:3000/dev/api/ghost/dev/users'`
