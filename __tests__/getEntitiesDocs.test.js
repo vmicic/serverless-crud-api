@@ -297,6 +297,7 @@ describe('get pagination response multiple nested entities', () => {
 
     const response = await getEntitiesDocs(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('get entities not existing nested entity', async () => {
@@ -307,6 +308,7 @@ describe('get pagination response multiple nested entities', () => {
 
     const response = await getEntitiesDocs(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('get entities docs multiple level nested', async () => {
@@ -317,6 +319,7 @@ describe('get pagination response multiple nested entities', () => {
 
     const response = await getEntitiesDocs(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       entities: [{ users: [{ posts: ['comments'] }] }],
     });
@@ -330,6 +333,7 @@ describe('get pagination response multiple nested entities', () => {
 
     const response = await getEntitiesDocs(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       entities: [{ posts: ['comments'] }],
     });
@@ -343,6 +347,7 @@ describe('get pagination response multiple nested entities', () => {
 
     const response = await getEntitiesDocs(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       entities: ['comments'],
     });

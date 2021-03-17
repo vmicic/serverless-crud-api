@@ -21,14 +21,22 @@ const getEnv = async (event) => {
     doc = await User.findOne(query, 'environments.$').exec();
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
+    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
   }
   await mongoose.connection.close();
 
   if (doc == null) {
-    return errorResponse(404, 'Request environment not found.');
+    return errorResponse(
+      404,
+      { 'Content-type': 'text/plain' },
+      'Request environment not found.',
+    );
   }
-  return successResponse(200, doc.environments[0][environment]);
+  return successResponse(
+    200,
+    { 'Content-type': 'application/json' },
+    JSON.stringify(doc.environments[0][environment]),
+  );
 };
 
 const getEnvs = async (event) => {
@@ -51,10 +59,14 @@ const getEnvs = async (event) => {
       });
     });
     await mongoose.connection.close();
-    return successResponse(200, { envs });
+    return successResponse(
+      200,
+      { 'Content-type': 'application/json' },
+      JSON.stringify({ envs }),
+    );
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
+    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
   }
 };
 

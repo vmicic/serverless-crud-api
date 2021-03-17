@@ -212,7 +212,11 @@ const getEntity = async (event) => {
   const { queryStringParameters } = event;
 
   if (idsInvalid(pathSegments)) {
-    return errorResponse(400, 'Id in path is invalid.');
+    return errorResponse(
+      400,
+      { 'Content-type': 'text/plain' },
+      'Id in path is invalid.',
+    );
   }
 
   if (isPagination(pathSegments, queryStringParameters)) {
@@ -235,7 +239,7 @@ const getEntity = async (event) => {
     doc = await User.aggregate(agreagateQuery).exec();
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
+    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
   }
   await mongoose.connection.close();
 
@@ -244,14 +248,26 @@ const getEntity = async (event) => {
     doc.length === 0 ||
     Object.keys(doc[0]).length === 0
   ) {
-    return errorResponse(404, 'Requested entity not found.');
+    return errorResponse(
+      404,
+      { 'Content-type': 'text/plain' },
+      'Requested entity not found.',
+    );
   }
 
   if (pathSegments.length % 2 === 0) {
     const hateoasDoc = convertToHateoasDoc(doc, pathSegments);
-    return successResponse(200, hateoasDoc);
+    return successResponse(
+      200,
+      { 'Content-type': 'application/json' },
+      JSON.stringify(hateoasDoc),
+    );
   }
-  return successResponse(200, doc[0]);
+  return successResponse(
+    200,
+    { 'Content-type': 'application/json' },
+    JSON.stringify(doc[0]),
+  );
 };
 
 module.exports = {

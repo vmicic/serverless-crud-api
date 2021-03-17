@@ -593,6 +593,18 @@ const initializeDb = async () => {
 describe('get pagination response', () => {
   beforeAll(async () => initializeDb());
 
+  test('page doesnt exists', async () => {
+    const event = {
+      path: '/api/ghost/dev/users',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      queryStringParameters: { page: 5, per_page: 2 },
+    };
+
+    const response = await getPaginationResponse(event);
+    expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+  });
+
   test('get pagination for shallow entity first page', async () => {
     const event = {
       path: '/api/ghost/dev/users',
@@ -602,6 +614,7 @@ describe('get pagination response', () => {
 
     const response = await getPaginationResponse(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       users: [
         { name: 'Tom', age: 39, _id: '6017d641860f43b553b21602' },
@@ -629,6 +642,7 @@ describe('get pagination response', () => {
 
     const response = await getPaginationResponse(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       users: [{ name: 'Mark', age: 39, _id: '600c099f8684263f7419818d' }],
       __embedded: {
@@ -654,6 +668,7 @@ describe('get pagination response', () => {
 
     const response = await getPaginationResponse(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       users: [
         {
@@ -709,6 +724,7 @@ describe('get pagination response', () => {
 
     const response = await getPaginationResponse(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       posts: [
         {
@@ -753,6 +769,7 @@ describe('get pagination response', () => {
 
     const response = await getPaginationResponse(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       posts: [
         {
@@ -783,6 +800,7 @@ describe('get pagination response', () => {
 
     const response = await getPaginationResponse(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       posts: [
         {

@@ -12,7 +12,11 @@ const createEnv = async (event) => {
   const envName = event.body;
   if (!(typeof envName === 'string' || envName instanceof String)) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Environment name is not string.');
+    return errorResponse(
+      400,
+      { 'Content-type': 'text/plain' },
+      'Environment name is not string.',
+    );
   }
 
   const { username } = event.pathParameters;
@@ -36,7 +40,7 @@ const createEnv = async (event) => {
     result = await User.updateOne(query, update).exec();
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
+    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
   }
 
   await mongoose.connection.close();
@@ -44,10 +48,11 @@ const createEnv = async (event) => {
   if (result.nModified === 0) {
     return errorResponse(
       400,
+      { 'Content-type': 'text/plain' },
       'Environment already exists or username not found.',
     );
   }
-  return successResponse(201);
+  return successResponse(201, { 'Content-type': 'text/plain' });
 };
 
 module.exports = {

@@ -151,9 +151,10 @@ describe('merge entity tests', () => {
     const response = await mergeEntity(event);
     expect(response).not.toBeNull();
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
-  test('wrong path', async () => {
+  test('invalid id in path', async () => {
     const user = {
       age: 20,
     };
@@ -167,6 +168,7 @@ describe('merge entity tests', () => {
     const response = await mergeEntity(event);
     expect(response).not.toBeNull();
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('invalid body', async () => {
@@ -179,6 +181,7 @@ describe('merge entity tests', () => {
     const response = await mergeEntity(event);
     expect(response.stat);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('merge entity', async () => {

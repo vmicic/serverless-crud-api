@@ -41,10 +41,22 @@ const createEntity = async (event) => {
   try {
     entity = JSON.parse(event.body);
   } catch (error) {
-    return errorResponse(400, 'Invalid body.');
+    return errorResponse(
+      400,
+      {
+        'Content-type': 'text/plain',
+      },
+      'Invalid body.',
+    );
   }
   if (Object.keys(entity).length !== 1) {
-    return errorResponse(400, 'Invalid body.');
+    return errorResponse(
+      400,
+      {
+        'Content-type': 'text/plain',
+      },
+      'Invalid body.',
+    );
   }
 
   const entityName = Object.keys(entity)[0];
@@ -65,14 +77,28 @@ const createEntity = async (event) => {
     result = await User.updateOne(query, update, options);
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
+    return errorResponse(
+      400,
+      {
+        'Content-type': 'text/plain',
+      },
+      'Bad request.',
+    );
   }
   await mongoose.connection.close();
   if (result.nModified === 0) {
-    return errorResponse(404, 'Unable to create requested entity.');
+    return errorResponse(
+      404,
+      {
+        'Content-type': 'text/plain',
+      },
+      'Unable to create requested entity.',
+    );
   }
 
-  return successResponse(201);
+  return successResponse(201, {
+    'Content-type': 'text/plain',
+  });
 };
 
 module.exports = {

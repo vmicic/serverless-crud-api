@@ -386,6 +386,7 @@ describe('delete entity tests', () => {
 
     const response = await deleteEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('delete single entity with id', async () => {
@@ -446,6 +447,7 @@ describe('delete entity tests', () => {
     };
 
     const response = await deleteEntity(event);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
     expect(response.statusCode).toBe(400);
     await mongoose.connection.close();
   });
@@ -509,6 +511,7 @@ describe('delete entity tests', () => {
 
     const response = await deleteEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('delete nested entity with multiple query params', async () => {
