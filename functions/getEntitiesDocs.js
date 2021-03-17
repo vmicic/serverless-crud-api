@@ -74,15 +74,27 @@ const getResponse = (entitiesStructure, path) => {
   const structurePath = pathSegments.join('.');
   if (structurePath === '') {
     const responseStructure = convertStructureToResponse(entitiesStructure);
-    return successResponse(200, responseStructure);
+    return successResponse(
+      200,
+      { 'Content-type': 'application/json' },
+      JSON.stringify(responseStructure),
+    );
   }
   try {
     const responseStructure = convertStructureToResponse(
       _.get(entitiesStructure, structurePath),
     );
-    return successResponse(200, responseStructure);
+    return successResponse(
+      200,
+      { 'Content-type': 'application/json' },
+      JSON.stringify(responseStructure),
+    );
   } catch (error) {
-    return errorResponse(400, 'Invalid entities path.');
+    return errorResponse(
+      400,
+      { 'Content-type': 'text/plain' },
+      'Invalid entities path.',
+    );
   }
 };
 
@@ -104,7 +116,7 @@ const getEntitiesDocs = async (event) => {
     doc = await User.findOne(query, 'environments.$').exec();
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
+    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
   }
   await mongoose.connection.close();
 

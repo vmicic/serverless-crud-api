@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user');
-const { getEnv } = require('../functions/getEnvironments');
+const { getEnv, getEnvs } = require('../functions/getEnvironments');
 const { createEnv } = require('../functions/createEnvironment');
 require('dotenv').config();
 
@@ -62,6 +62,7 @@ describe('create env', () => {
 
     const response = await createEnv(event);
     expect(response.statusCode).toBe(201);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('create already existing env', async () => {
@@ -73,6 +74,7 @@ describe('create env', () => {
 
     const response = await createEnv(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('create env with invalid username', async () => {
@@ -84,6 +86,7 @@ describe('create env', () => {
 
     const response = await createEnv(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('create env with object as environment name', async () => {
@@ -95,6 +98,7 @@ describe('create env', () => {
 
     const response = await createEnv(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 });
 
@@ -109,6 +113,7 @@ describe('get env', () => {
 
     const response = await getEnv(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({});
   });
 
@@ -120,7 +125,19 @@ describe('get env', () => {
 
     const response = await getEnv(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).not.toEqual({});
+  });
+
+  test('get env docs', async () => {
+    const event = {
+      path: '/api/ghost/envs',
+      pathParameters: { username: 'ghost' },
+    };
+
+    const response = await getEnvs(event);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({ envs: ['dev', 'prod'] });
   });
 
   test('get not existing env', async () => {
@@ -131,6 +148,7 @@ describe('get env', () => {
 
     const response = await getEnv(event);
     expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('get env not existing user', async () => {
@@ -141,5 +159,6 @@ describe('get env', () => {
 
     const response = await getEnv(event);
     expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 });

@@ -208,12 +208,16 @@ const getPaginationResponse = async (event) => {
     doc = await User.aggregate(query).exec();
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
+    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
   }
   await mongoose.connection.close();
 
   if (doc.length === 0) {
-    return successResponse(400, "Requested page doesn't exist.");
+    return errorResponse(
+      400,
+      { 'Content-type': 'text/plain' },
+      "Requested page doesn't exist.",
+    );
   }
 
   const newRootDoc = replaceRoot(doc, pathSegments, environment);
@@ -223,7 +227,11 @@ const getPaginationResponse = async (event) => {
     queryStringParameters,
   );
 
-  return successResponse(200, paginationResponse);
+  return successResponse(
+    200,
+    { 'Content-type': 'application/json' },
+    JSON.stringify(paginationResponse),
+  );
 };
 
 module.exports = {

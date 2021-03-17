@@ -156,7 +156,11 @@ const deleteEntity = async (event) => {
   const { queryStringParameters } = event;
 
   if (idsInvalid(pathSegments)) {
-    return errorResponse(400, 'Id in path is invalid.');
+    return errorResponse(
+      400,
+      { 'Content-type': 'text/plain' },
+      'Id in path is invalid.',
+    );
   }
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
@@ -177,11 +181,11 @@ const deleteEntity = async (event) => {
     await User.updateOne(query, update, options);
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request');
+    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request');
   }
   await mongoose.connection.close();
 
-  return successResponse(204);
+  return successResponse(204, { 'Content-type': 'text/plain' });
 };
 
 module.exports = {

@@ -121,6 +121,7 @@ describe('create entity tests', () => {
 
     const response = await createEntity(event);
     expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('create entity for not existing username', async () => {
@@ -139,6 +140,7 @@ describe('create entity tests', () => {
 
     const response = await createEntity(event);
     expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('create entity with invalid body', async () => {
@@ -158,6 +160,7 @@ describe('create entity tests', () => {
 
     const response = await createEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('create entity with invalid json', async () => {
@@ -170,6 +173,7 @@ describe('create entity tests', () => {
 
     const response = await createEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('create nested entities', async () => {

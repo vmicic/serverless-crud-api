@@ -302,6 +302,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('invalid body add entities', async () => {
@@ -315,6 +316,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('id in path invalid', async () => {
@@ -328,6 +330,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('invalid body replace entity send an array', async () => {
@@ -341,6 +344,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('invalid body replace entity send string', async () => {
@@ -354,6 +358,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntity(event);
     expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('add new entities with entity not existing', async () => {

@@ -643,6 +643,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({ users: usersWithStringId });
   });
 
@@ -655,6 +656,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
   test('get entity with query prop', async () => {
@@ -666,6 +668,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       users: [
         {
@@ -686,6 +689,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({ users: [] });
   });
 
@@ -698,6 +702,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       users: [
         {
@@ -718,6 +723,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       users: [
         {
@@ -732,6 +738,18 @@ describe('get entity tests', () => {
     });
   });
 
+  test('get entity with invalid id', async () => {
+    const event = {
+      path: '/api/ghost/dev/users/131',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      queryStringParameters: null,
+    };
+
+    const response = await getEntity(event);
+    expect(response.statusCode).toBe(400);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+  });
+
   test('get entity with not existing id', async () => {
     const event = {
       path: '/api/ghost/dev/users/601a91476e1694058728247c',
@@ -741,6 +759,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({ users: [] });
   });
 
@@ -753,6 +772,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       posts: [
         {
@@ -787,6 +807,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       posts: [
         {
@@ -821,6 +842,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       posts: [
         {
@@ -852,6 +874,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       posts: [
         {
@@ -878,6 +901,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       comments: [
         {
@@ -903,6 +927,7 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
       comments: [
         {
@@ -924,5 +949,6 @@ describe('get entity tests', () => {
 
     const response = await getEntity(event);
     expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 });

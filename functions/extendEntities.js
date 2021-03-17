@@ -104,26 +104,46 @@ const extendEntity = async (event) => {
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
 
   if (idsInvalid(pathSegments)) {
-    return errorResponse(400, 'Id in path is invalid.');
+    return errorResponse(
+      400,
+      { 'Content-type': 'text/plain' },
+      'Id in path is invalid.',
+    );
   }
 
   let bodyPayload;
   try {
     bodyPayload = JSON.parse(event.body);
   } catch (error) {
-    return errorResponse(400, 'Invalid body.');
+    return errorResponse(
+      400,
+      { 'Content-type': 'text/plain' },
+      'Invalid body.',
+    );
   }
   if (pathSegments.length % 2 === 1) {
     if (!Array.isArray(bodyPayload)) {
-      return errorResponse(400, 'Invalid body.');
+      return errorResponse(
+        400,
+        { 'Content-type': 'text/plain' },
+        'Invalid body.',
+      );
     }
     addIdForObjects(bodyPayload);
   } else {
     if (Array.isArray(bodyPayload)) {
-      return errorResponse(400, 'Invalid body.');
+      return errorResponse(
+        400,
+        { 'Content-type': 'text/plain' },
+        'Invalid body.',
+      );
     }
     if (!(typeof bodyPayload === 'object' && bodyPayload !== null)) {
-      return errorResponse(400, 'Invalid body.');
+      return errorResponse(
+        400,
+        { 'Content-type': 'text/plain' },
+        'Invalid body.',
+      );
     }
     bodyPayload._id = mongoose.Types.ObjectId(pathSegments.slice(-1).pop());
     addIdForArrayInField(bodyPayload);
@@ -154,11 +174,11 @@ const extendEntity = async (event) => {
     await User.updateOne(query, update, options);
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, 'Bad request.');
+    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
   }
 
   await mongoose.connection.close();
-  return successResponse(204);
+  return successResponse(204, { 'Content-type': 'text/plain' });
 };
 
 module.exports = {
