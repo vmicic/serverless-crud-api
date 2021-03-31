@@ -96,7 +96,7 @@ functions:
           path: /api/{username}/{environment}/{any+}
           method: GET
   createEntity:
-    handler: functions/createEntities.createEntity
+    handler: functions/createEntities/createEntities.createEntityOrEntitySchema
     events:
       - httpApi:
           path: /api/{username}/{environment}

@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
-const { getUserModel } = require('../models/user.js');
-const { successResponse, errorResponse } = require('../util/responseUtil');
+const { getUserModel } = require('../../models/user.js');
+const { validateInput } = require('./inputValidation');
+const { createEntitySchema } = require('./createEntitySchema');
+const {
+  successResponse,
+  errorResponse,
+  errorResponseFromError,
+} = require('../../util/responseUtil');
 require('dotenv').config();
 
 /* eslint-disable no-param-reassign */
@@ -34,37 +40,29 @@ const getOptions = (env) => {
   return { arrayFilters, useFindAndModify: false };
 };
 
-const createEntity = async (event) => {
-  const { username, environment } = event.pathParameters;
-  let entity;
-
+const createEntityOrEntitySchema = async (event) => {
   try {
-    entity = JSON.parse(event.body);
+    validateInput(event);
   } catch (error) {
-    return errorResponse(
-      400,
-      {
-        'Content-type': 'text/plain',
-      },
-      'Invalid body.',
-    );
+    return errorResponseFromError(error);
   }
-  if (Object.keys(entity).length !== 1) {
-    return errorResponse(
-      400,
-      {
-        'Content-type': 'text/plain',
-      },
-      'Invalid body.',
-    );
+  const body = JSON.parse(event.body);
+
+  if ('__meta' in body) {
+    return createEntitySchema(event);
   }
 
-  const entityName = Object.keys(entity)[0];
-  addIdForObjects(entity[entityName]);
+  const { username, environment } = event.pathParameters;
+
+  const entityName = Object.keys(body)[0];
+  addIdForObjects(body[entityName]);
 
   const query = { username };
-  const update = getUpdate(environment, entityName, entity);
+  const update = getUpdate(environment, entityName, body);
   const options = getOptions(environment);
+
+  console.log(update);
+  console.log(options);
 
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
@@ -82,7 +80,7 @@ const createEntity = async (event) => {
       {
         'Content-type': 'text/plain',
       },
-      'Bad request.',
+      'Please try again.',
     );
   }
   await mongoose.connection.close();
@@ -102,6 +100,6 @@ const createEntity = async (event) => {
 };
 
 module.exports = {
-  createEntity,
+  createEntityOrEntitySchema,
   addIdForObjects,
 };

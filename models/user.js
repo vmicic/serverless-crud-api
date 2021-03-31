@@ -4,6 +4,7 @@ const userSchema = new mongoose.Schema(
   {
     username: String,
     environments: [],
+    entitySchemas: {},
   },
   { strict: false },
 );
