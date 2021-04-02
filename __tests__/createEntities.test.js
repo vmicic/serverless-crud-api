@@ -3,7 +3,7 @@ const { getUserModel } = require('../models/user');
 const {
   createEntityOrEntitySchema,
   addIdForObjects,
-} = require('../functions/createEntities/createEntities');
+} = require('../functions/createEntities/createEntityOrEntitySchema');
 require('dotenv').config();
 
 test('add id for objects with no nested entities', () => {
@@ -177,7 +177,7 @@ describe('create entity tests', () => {
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
-  test.only('create nested entities', async () => {
+  test('create nested entities', async () => {
     const users = {
       users: [
         { name: 'Rom', age: 39 },
@@ -203,8 +203,6 @@ describe('create entity tests', () => {
       username: 'ghost',
       'environments.dev.users': { $exists: true },
     });
-    console.log(doc);
-    console.log(doc.environments);
     expect(doc).not.toBeNull();
     expect(doc.environments[0].dev.users.length).toBe(3);
     expect(doc.environments[0].dev.users[2].posts.length).toBe(2);
