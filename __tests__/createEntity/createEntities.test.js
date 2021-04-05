@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
-const { getUserModel } = require('../models/user');
+const { getUserModel } = require('../../models/user');
 const {
-  createEntityOrEntitySchema,
+  createEntityOrEntitySchemaWrapper,
   addIdForObjects,
-} = require('../functions/createEntities/createEntityOrEntitySchema');
+} = require('../../functions/createEntity/createEntityOrEntitySchema');
 require('dotenv').config();
 
 test('add id for objects with no nested entities', () => {
@@ -88,7 +88,7 @@ describe('create entity tests', () => {
       body: JSON.stringify(users),
     };
 
-    const response = await createEntityOrEntitySchema(event);
+    const response = await createEntityOrEntitySchemaWrapper(event);
     expect(response.statusCode).toBe(201);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -119,7 +119,7 @@ describe('create entity tests', () => {
       body: JSON.stringify(users),
     };
 
-    const response = await createEntityOrEntitySchema(event);
+    const response = await createEntityOrEntitySchemaWrapper(event);
     expect(response.statusCode).toBe(404);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -138,7 +138,7 @@ describe('create entity tests', () => {
       body: JSON.stringify(users),
     };
 
-    const response = await createEntityOrEntitySchema(event);
+    const response = await createEntityOrEntitySchemaWrapper(event);
     expect(response.statusCode).toBe(404);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -159,7 +159,7 @@ describe('create entity tests', () => {
       body: JSON.stringify(users),
     };
 
-    const response = await createEntityOrEntitySchema(event);
+    const response = await createEntityOrEntitySchemaWrapper(event);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -172,7 +172,7 @@ describe('create entity tests', () => {
         '"users":[{"name":"Rom","age":39},{"name":"Mark","age":39},{"name":"John","age":38}],"moreUser":[]}',
     };
 
-    const response = await createEntityOrEntitySchema(event);
+    const response = await createEntityOrEntitySchemaWrapper(event);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -191,7 +191,7 @@ describe('create entity tests', () => {
       body: JSON.stringify(users),
     };
 
-    const response = await createEntityOrEntitySchema(event);
+    const response = await createEntityOrEntitySchemaWrapper(event);
     expect(response.statusCode).toBe(201);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,

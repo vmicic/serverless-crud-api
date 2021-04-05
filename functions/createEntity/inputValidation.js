@@ -3,7 +3,7 @@ const parseJson = (body) => {
   try {
     return JSON.parse(body);
   } catch (error) {
-    error.message = 'Invalid body';
+    error.message = 'Invalid body.';
     error.statusCode = 400;
     throw error;
   }
@@ -39,7 +39,7 @@ const validateBodyWithSchema = (body) => {
 
 const validateProperties = (body) => {
   if (Object.keys(body).length !== 1 && Object.keys(body).length !== 2) {
-    const error = new Error('Invalid body');
+    const error = new Error('Invalid body.');
     error.statusCode = 400;
     throw error;
   }
@@ -58,4 +58,10 @@ const validateInput = (event) => {
   validateProperties(body);
 };
 
-module.exports = { validateInput };
+module.exports = {
+  validateInput,
+  validateProperties,
+  validateBodyWithSchema,
+  validateBodyWithoutSchema,
+  parseJson,
+};

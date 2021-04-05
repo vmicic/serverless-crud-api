@@ -25,7 +25,6 @@ const createEntityOrEntitySchemaWrapper = async (event) => {
   try {
     return await createEntityOrEntitySchema(event);
   } catch (error) {
-    console.log(error);
     if (error.statusCode !== undefined) {
       return errorResponseFromError(error);
     }

@@ -110,14 +110,14 @@ const validateEntityWithSchema = (entities, schema) => {
       );
     }
 
-    Object.entries(schema).forEach((entry) => {
-      const [schemaFieldName, schemaType] = entry;
-      validateFieldExistsInSchema(schemaFieldName, entity);
+    Object.entries(schema).forEach((schemaFieldNameType) => {
+      const [fieldName, fieldType] = schemaFieldNameType;
+      validateFieldExistsInSchema(fieldName, entity);
 
-      if (typeof schemaType === 'object') {
-        validateEntityWithSchema(entity[schemaFieldName], schemaType);
+      if (typeof fieldType === 'object') {
+        validateEntityWithSchema(entity[fieldName], fieldType);
       } else {
-        validateType(entity[schemaFieldName], schemaType);
+        validateType(entity[fieldName], fieldType);
       }
     });
   });
