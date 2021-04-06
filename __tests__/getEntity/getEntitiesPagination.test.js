@@ -7,8 +7,8 @@ const {
   getDbQuery,
   convertToPaginationResponse,
   replaceRoot,
-} = require('../functions/getEntitiesPagination');
-const { getUserModel } = require('../models/user');
+} = require('../../functions/getEntity/getEntityPagination');
+const { getUserModel } = require('../../models/user');
 require('dotenv').config();
 
 test('is pagination more query params', () => {

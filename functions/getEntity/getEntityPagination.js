@@ -2,9 +2,9 @@
 /* eslint-disable no-underscore-dangle */
 const mongoose = require('mongoose');
 const _ = require('lodash');
-const { getUserModel } = require('../models/user.js');
-const { successResponse, errorResponse } = require('../util/responseUtil');
-const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
+const { getUserModel } = require('../../models/user.js');
+const { successResponse, errorResponse } = require('../../util/responseUtil');
+const { getSegmentsWithoutUsernameAndEnv } = require('../../util/urlUtils');
 require('dotenv').config();
 
 const isPagination = (pathSegments, queryStringParameters) => {

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { BadRequestError } = require('../../errors/BadRequestError.js');
 const { getUserModel } = require('../../models/user.js');
 const { successResponse, errorResponse } = require('../../util/responseUtil');
 
@@ -24,8 +25,10 @@ const getUpdate = async (query, environment, entitySchema, entityName) => {
     entitySchemas: 1,
   });
   if (document === null) {
-    const error = new Error('Username or environment not found.');
-    error.statusCode = 404;
+    const error = new BadRequestError(
+      404,
+      'Username or environment not found.',
+    );
     throw error;
   }
 

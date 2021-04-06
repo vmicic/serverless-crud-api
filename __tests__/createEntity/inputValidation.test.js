@@ -5,7 +5,7 @@ const {
   validateBodyWithSchema,
   validateProperties,
   validateInput,
-} = require('../../functions/createEntity/inputValidation');
+} = require('../../functions/createEntity/validateInput');
 
 describe('parse json', () => {
   test('invalid str', () => {

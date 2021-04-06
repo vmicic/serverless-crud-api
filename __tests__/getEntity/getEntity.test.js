@@ -6,10 +6,12 @@ const {
   getEntityByIdDbQuery,
   getNestedEntitiesByQueryParamsDbQuery,
   getDbQuery,
-  getEntity,
   convertToHateoasDoc,
-} = require('../functions/getEntities');
-const { getUserModel } = require('../models/user');
+} = require('../../functions/getEntity/getEntity');
+const {
+  getEntityOrSchemaWrapper,
+} = require('../../functions/getEntity/getEntityOrSchema');
+const { getUserModel } = require('../../models/user');
 require('dotenv').config();
 
 test('get hateos doc with no nested entities', () => {
@@ -641,7 +643,7 @@ describe('get entity tests', () => {
       queryStringParameters: null,
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({ users: usersWithStringId });
@@ -654,7 +656,7 @@ describe('get entity tests', () => {
       queryStringParameters: null,
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(404);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -666,7 +668,7 @@ describe('get entity tests', () => {
       queryStringParameters: { name: 'Mark' },
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -687,7 +689,7 @@ describe('get entity tests', () => {
       queryStringParameters: { name: 'Michel' },
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({ users: [] });
@@ -700,7 +702,7 @@ describe('get entity tests', () => {
       queryStringParameters: { name: 'Mark', age: 39 },
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -721,7 +723,7 @@ describe('get entity tests', () => {
       queryStringParameters: null,
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -745,7 +747,7 @@ describe('get entity tests', () => {
       queryStringParameters: null,
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -757,7 +759,7 @@ describe('get entity tests', () => {
       queryStringParameters: null,
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({ users: [] });
@@ -770,7 +772,7 @@ describe('get entity tests', () => {
       queryStringParameters: null,
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -805,7 +807,7 @@ describe('get entity tests', () => {
       queryStringParameters: null,
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -840,7 +842,7 @@ describe('get entity tests', () => {
       queryStringParameters: { text: 'hello my name is John' },
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -872,7 +874,7 @@ describe('get entity tests', () => {
       queryStringParameters: { text: 'hello my name is John' },
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -899,7 +901,7 @@ describe('get entity tests', () => {
       queryStringParameters: null,
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -925,7 +927,7 @@ describe('get entity tests', () => {
       queryStringParameters: { text: 'Nice to meet you', rating: '5' },
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(200);
     expect(response.headers).toEqual({ 'Content-type': 'application/json' });
     expect(JSON.parse(response.body)).toEqual({
@@ -947,7 +949,7 @@ describe('get entity tests', () => {
       queryStringParameters: { text: 'Nice to meet you', rating: '5' },
     };
 
-    const response = await getEntity(event);
+    const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(404);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });

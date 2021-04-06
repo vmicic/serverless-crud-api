@@ -1,14 +1,16 @@
 /* eslint-disable operator-linebreak */
 const mongoose = require('mongoose');
-const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
-const { getUserModel } = require('../models/user.js');
-const { successResponse, errorResponse } = require('../util/responseUtil');
-const { idsInvalid } = require('./extendEntities');
 const {
   isPagination,
   getPaginationResponse,
-} = require('./getEntitiesPagination');
+} = require('./getEntityPagination');
+const { getSegmentsWithoutUsernameAndEnv } = require('../../util/urlUtils');
+const { getUserModel } = require('../../models/user.js');
+const { successResponse } = require('../../util/responseUtil');
+const { validateInput } = require('./validateInput');
+const { BadRequestError } = require('../../errors/BadRequestError');
 require('dotenv').config();
+
 /* eslint-disable no-underscore-dangle */
 const getProjectQuery = (array, params) => {
   const filterObject = {};
@@ -206,18 +208,37 @@ const convertToHateoasDoc = (doc, segments) => {
   return hateosDoc[0];
 };
 
-const getEntity = async (event) => {
-  const { username, environment } = event.pathParameters;
-  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
-  const { queryStringParameters } = event;
+const getResponse = (doc, pathSegments) => {
+  if (
+    doc === undefined ||
+    doc.length === 0 ||
+    Object.keys(doc[0]).length === 0
+  ) {
+    const error = new BadRequestError(404, 'Requested entity not found.');
+    throw error;
+  }
 
-  if (idsInvalid(pathSegments)) {
-    return errorResponse(
-      400,
-      { 'Content-type': 'text/plain' },
-      'Id in path is invalid.',
+  if (pathSegments.length % 2 === 0) {
+    const hateoasDoc = convertToHateoasDoc(doc, pathSegments);
+    return successResponse(
+      200,
+      { 'Content-type': 'application/json' },
+      JSON.stringify(hateoasDoc),
     );
   }
+  return successResponse(
+    200,
+    { 'Content-type': 'application/json' },
+    JSON.stringify(doc[0]),
+  );
+};
+
+const getEntity = async (event) => {
+  validateInput(event);
+
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+  const { username, environment } = event.pathParameters;
+  const { queryStringParameters } = event;
 
   if (isPagination(pathSegments, queryStringParameters)) {
     return getPaginationResponse(event);
@@ -234,40 +255,10 @@ const getEntity = async (event) => {
   ].concat(getDbQuery([...pathSegments], environment, queryStringParameters));
 
   const User = getUserModel();
-  let doc;
-  try {
-    doc = await User.aggregate(agreagateQuery).exec();
-  } catch (error) {
-    await mongoose.connection.close();
-    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
-  }
+  const document = await User.aggregate(agreagateQuery).exec();
   await mongoose.connection.close();
 
-  if (
-    doc === undefined ||
-    doc.length === 0 ||
-    Object.keys(doc[0]).length === 0
-  ) {
-    return errorResponse(
-      404,
-      { 'Content-type': 'text/plain' },
-      'Requested entity not found.',
-    );
-  }
-
-  if (pathSegments.length % 2 === 0) {
-    const hateoasDoc = convertToHateoasDoc(doc, pathSegments);
-    return successResponse(
-      200,
-      { 'Content-type': 'application/json' },
-      JSON.stringify(hateoasDoc),
-    );
-  }
-  return successResponse(
-    200,
-    { 'Content-type': 'application/json' },
-    JSON.stringify(doc[0]),
-  );
+  return getResponse(document, pathSegments);
 };
 
 module.exports = {

@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { validateInput } = require('./inputValidation');
+const { validateInput } = require('./validateInput');
 const { createEntitySchema } = require('./createEntitySchema');
 const {
   errorResponseFromError,

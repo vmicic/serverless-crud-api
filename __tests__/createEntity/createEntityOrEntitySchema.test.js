@@ -23,7 +23,7 @@ const initializeDb = async () => {
   await mongoose.connection.close();
 };
 
-describe.only('invalid input', () => {
+describe('invalid input', () => {
   test('invalid body', async () => {
     const str =
       '"users":[{"name":"Rom","age":39},{"name":"Mark","age":39},{"name":"John","age":38}],"moreUser":[]}';

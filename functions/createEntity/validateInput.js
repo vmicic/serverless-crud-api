@@ -1,3 +1,5 @@
+const { BadRequestError } = require('../../errors/BadRequestError');
+
 /* eslint-disable no-underscore-dangle */
 const parseJson = (body) => {
   try {
@@ -21,14 +23,12 @@ const validateBodyWithoutSchema = (body) => {
 
 const validateBodyWithSchema = (body) => {
   if (!('__meta' in body)) {
-    const error = new Error('Invalid body.');
-    error.statusCode = 400;
+    const error = new BadRequestError(400, 'Invalid body.');
     throw error;
   }
 
   if (Object.keys(body.__meta).length !== 1) {
-    const error = new Error('Properties in __meta are invalid.');
-    error.statusCode = 400;
+    const error = new BadRequestError(400, 'Properties in __meta are invalid.');
     throw error;
   }
 
@@ -37,16 +37,14 @@ const validateBodyWithSchema = (body) => {
     !('type' in body.__meta && body.__meta.type) &&
     !('force' in body.__meta && body.__meta.force)
   ) {
-    const error = new Error('Property __meta is invalid.');
-    error.statusCode = 400;
+    const error = new BadRequestError(400, 'Property __meta is invalid.');
     throw error;
   }
 };
 
 const validateProperties = (body) => {
   if (Object.keys(body).length !== 1 && Object.keys(body).length !== 2) {
-    const error = new Error('Invalid body.');
-    error.statusCode = 400;
+    const error = new BadRequestError(400, 'Invalid body.');
     throw error;
   }
 
