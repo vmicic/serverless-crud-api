@@ -21,7 +21,13 @@ const validateBodyWithoutSchema = (body) => {
 
 const validateBodyWithSchema = (body) => {
   if (!('__meta' in body)) {
-    const error = new Error('Property __meta has to be in body.');
+    const error = new Error('Invalid body.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (Object.keys(body.__meta).length !== 1) {
+    const error = new Error('Properties in __meta are invalid.');
     error.statusCode = 400;
     throw error;
   }

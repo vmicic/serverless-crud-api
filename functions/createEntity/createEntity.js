@@ -162,6 +162,13 @@ const createEntity = async (event) => {
     useUnifiedTopology: true,
   });
 
+  // if we are forcing creation of entity without schema check
+  if ('__meta' in body && 'force' in body.__meta && body.__meta.force) {
+    const result = await createEntityInDb(body, event);
+    await mongoose.connection.close();
+    return getResponse(result);
+  }
+
   const { schemaExists, schema } = await getEntitySchema(event);
   if (schemaExists) {
     const entityName = Object.keys(body).find((key) => key !== '__meta');
@@ -170,7 +177,6 @@ const createEntity = async (event) => {
 
   const result = await createEntityInDb(body, event);
   await mongoose.connection.close();
-
   return getResponse(result);
 };
 

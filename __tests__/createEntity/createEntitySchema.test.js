@@ -8,32 +8,36 @@ const {
 } = require('../../functions/createEntity/createEntitySchema');
 require('dotenv').config();
 
-test('get schema and name', () => {
-  const body = JSON.stringify({
-    users: { name: 'string' },
-    __meta: { type: true },
+describe('get schema and name', () => {
+  test('no errors', () => {
+    const body = JSON.stringify({
+      users: { name: 'string' },
+      __meta: { type: true },
+    });
+
+    const { entitySchema, entityName } = getSchemaAndName(body);
+    expect(entitySchema).toStrictEqual({ name: 'string' });
+    expect(entityName).toMatch('users');
+  });
+});
+
+describe('get response', () => {
+  test('error response', () => {
+    const result = { nModified: 0 };
+    const response = getResponse(result);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toMatch(
+      'Unable to create requested entity or it already exists.',
+    );
   });
 
-  const { entitySchema, entityName } = getSchemaAndName(body);
-  expect(entitySchema).toStrictEqual({ name: 'string' });
-  expect(entityName).toMatch('users');
-});
+  test('success response', () => {
+    const result = { nModified: 1 };
+    const response = getResponse(result);
 
-test('get response error response', () => {
-  const result = { nModified: 0 };
-  const response = getResponse(result);
-
-  expect(response.statusCode).toBe(404);
-  expect(response.body).toMatch(
-    'Unable to create requested entity or it already exists.',
-  );
-});
-
-test('get response success response', () => {
-  const result = { nModified: 1 };
-  const response = getResponse(result);
-
-  expect(response.statusCode).toBe(201);
+    expect(response.statusCode).toBe(201);
+  });
 });
 
 const initDbWithoutSchemas = async () => {

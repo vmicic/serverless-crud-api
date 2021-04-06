@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { validateInput } = require('./inputValidation');
 const { createEntitySchema } = require('./createEntitySchema');
 const {
@@ -25,6 +26,7 @@ const createEntityOrEntitySchemaWrapper = async (event) => {
   try {
     return await createEntityOrEntitySchema(event);
   } catch (error) {
+    await mongoose.connection.close();
     if (error.statusCode !== undefined) {
       return errorResponseFromError(error);
     }

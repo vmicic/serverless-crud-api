@@ -623,6 +623,20 @@ describe('create entity with schema no nested', () => {
     };
 
     await createEntity(event);
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(1);
+    await mongoose.connection.close();
   });
 
   test('no error entity with properties with same name', async () => {
@@ -640,6 +654,19 @@ describe('create entity with schema no nested', () => {
     };
 
     await createEntity(event);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(2);
+    await mongoose.connection.close();
   });
 
   test('everything ok', async () => {
@@ -798,26 +825,6 @@ describe('create entity with schema nested', () => {
     await mongoose.connection.close();
   });
 
-  test('no error', async () => {
-    const users = {
-      users: [
-        { name: 'John', age: 20, comments: [{ text: 'hello' }] },
-        {
-          name: 'Rom',
-          age: 39,
-          comments: [{ text: 'hello' }, { text: 'friend' }],
-        },
-      ],
-    };
-    const event = {
-      path: '/api/ghost/dev',
-      pathParameters: { username: 'ghost', environment: 'dev' },
-      body: JSON.stringify(users),
-    };
-
-    await createEntity(event);
-  });
-
   test('no error entity with properties with same name', async () => {
     const users = {
       users: [
@@ -836,6 +843,22 @@ describe('create entity with schema nested', () => {
     };
 
     await createEntity(event);
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(1);
+    expect(doc.environments[0].dev.users[0].comments.length).toBe(1);
+    expect(doc.environments[0].dev.users[0].comments[0].text).toMatch('alloha');
+    await mongoose.connection.close();
   });
 
   test('everything ok', async () => {
@@ -879,6 +902,59 @@ describe('create entity with schema nested', () => {
     });
     expect(doc).not.toBeNull();
     expect(doc.environments[0].dev.users.length).toBe(3);
+    expect(doc.environments[0].dev.users[0].comments.length).toBe(2);
+    expect(doc.environments[0].dev.users[0].comments[1].text).toMatch('friend');
+    await mongoose.connection.close();
+  });
+
+  test('create with different then schema but with force true', async () => {
+    const body = {
+      users: [
+        {
+          name: 'Rom',
+          lastname: 'Anderson',
+          age: 39,
+          comments: [{ text: 'hello' }, { text: 'friend', rating: 5 }],
+        },
+        {
+          name: 'Mark',
+          age: 39,
+          comments: [{ text: 'hello' }, { text: 'friend' }],
+        },
+        {
+          name: 'John',
+          age: 38,
+          comments: [{ text: 'hello' }, { text: 'friend' }],
+        },
+      ],
+      __meta: {
+        force: true,
+      },
+    };
+
+    const event = {
+      path: '/api/ghost/dev',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(body),
+    };
+
+    const response = await createEntity(event);
+    expect(response.statusCode).toBe(201);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(3);
+    expect(doc.environments[0].dev.users[0].comments.length).toBe(2);
+    expect(doc.environments[0].dev.users[0].comments[1].text).toMatch('friend');
+    expect(doc.environments[0].dev.users[0].comments[1].rating).toBe(5);
     await mongoose.connection.close();
   });
 
