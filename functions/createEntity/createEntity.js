@@ -67,7 +67,7 @@ const validateType = (value, fieldTypeInSchema) => {
       if (!Array.isArray(value)) {
         throw new BadRequestError(417, 'Expected array got object.');
       }
-    } else if (fieldTypeInSchema !== 'object') {
+    } else {
       throw new BadRequestError(
         417,
         `Expected ${fieldTypeInSchema} got object.`,
@@ -89,21 +89,14 @@ const validateType = (value, fieldTypeInSchema) => {
 
 const validateFieldExistsInSchema = (field, entity) => {
   if (!(field in entity)) {
-    throw new BadRequestError(417, `Entity does not containe ${field} field.`);
+    throw new BadRequestError(417, `Entity does not contain ${field} field.`);
   }
-};
-
-const getEntityName = (body) => {
-  if (Object.keys(body).length === 1) {
-    return Object.keys(body)[0];
-  }
-
-  return Object.keys(body).find((key) => key !== '__meta');
 };
 
 const validateEntityWithSchema = (entities, schema) => {
   entities.forEach((entity) => {
-    if (Object.keys(entity).length !== Object.keys(schema).length) {
+    const numberOfUniqueProperties = new Set(Object.keys(entity)).size;
+    if (numberOfUniqueProperties !== Object.keys(schema).length) {
       throw new BadRequestError(
         417,
         'Number of fields in entity is not correct.',
@@ -125,7 +118,7 @@ const validateEntityWithSchema = (entities, schema) => {
 
 const createEntityInDb = async (body, event) => {
   const { username, environment } = event.pathParameters;
-  const entityName = getEntityName(body);
+  const entityName = Object.keys(body).find((key) => key !== '__meta');
 
   addIdForObjects(body[entityName]);
   const query = { username };
@@ -137,13 +130,22 @@ const createEntityInDb = async (body, event) => {
 };
 
 const getResponse = (result) => {
+  if (result.n === 0) {
+    return errorResponse(
+      404,
+      {
+        'Content-type': 'text/plain',
+      },
+      'Username not found.',
+    );
+  }
   if (result.nModified === 0) {
     return errorResponse(
       404,
       {
         'Content-type': 'text/plain',
       },
-      'Unable to create requested entity.',
+      'Environment not found.',
     );
   }
 
@@ -162,7 +164,7 @@ const createEntity = async (event) => {
 
   const { schemaExists, schema } = await getEntitySchema(event);
   if (schemaExists) {
-    const entityName = getEntityName(body);
+    const entityName = Object.keys(body).find((key) => key !== '__meta');
     validateEntityWithSchema(body[entityName], schema);
   }
 
@@ -172,4 +174,14 @@ const createEntity = async (event) => {
   return getResponse(result);
 };
 
-module.exports = { createEntity, addIdForObjects };
+module.exports = {
+  createEntity,
+  addIdForObjects,
+  getUpdate,
+  getOptions,
+  getEntitySchema,
+  validateFieldExistsInSchema,
+  validateType,
+  validateEntityWithSchema,
+  createEntityInDb,
+};

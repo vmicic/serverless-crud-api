@@ -106,10 +106,6 @@ const initDbWithSchema = async () => {
         },
       },
     },
-    {
-      arrayFilters: [{ 'envId.dev': { $exists: true } }],
-      useFindAndModify: false,
-    },
   ).exec();
 
   await mongoose.connection.close();

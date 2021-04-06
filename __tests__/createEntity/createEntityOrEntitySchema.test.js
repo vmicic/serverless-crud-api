@@ -1,58 +1,9 @@
 const mongoose = require('mongoose');
-const { getUserModel } = require('../../models/user');
 const {
   createEntityOrEntitySchemaWrapper,
-  addIdForObjects,
 } = require('../../functions/createEntity/createEntityOrEntitySchema');
 require('dotenv').config();
-
-test('add id for objects with no nested entities', () => {
-  const users = [
-    {
-      name: 'Tom',
-      age: 39,
-    },
-    {
-      name: 'Mark',
-      age: 39,
-    },
-    {
-      name: 'John',
-      age: 38,
-    },
-  ];
-
-  addIdForObjects(users);
-  users.forEach((user) => {
-    expect(Object.keys(user).length).toBe(3);
-  });
-});
-
-test('add id for objects with nested entities', () => {
-  const users = [
-    { name: 'Tom', age: 39 },
-    { name: 'Mark', age: 39 },
-    {
-      name: 'John',
-      age: 38,
-      posts: [
-        {
-          text: 'hello my name is John',
-        },
-        {
-          text: 'I like it',
-        },
-      ],
-    },
-  ];
-
-  addIdForObjects(users);
-  expect(Object.keys(users[0]).length).toBe(3);
-  expect(Object.keys(users[1]).length).toBe(3);
-  expect(Object.keys(users[2]).length).toBe(4);
-  expect(Object.keys(users[2].posts[0]).length).toBe(2);
-  expect(Object.keys(users[2].posts[1]).length).toBe(2);
-});
+const { getUserModel } = require('../../models/user');
 
 const initializeDb = async () => {
   await mongoose.connect(process.env.MONGODB_URI, {
@@ -75,17 +26,18 @@ describe('create entity tests', () => {
   beforeEach(async () => initializeDb());
 
   test('create entity', async () => {
-    const users = {
+    const body = {
       users: [
         { name: 'Rom', age: 39 },
         { name: 'Mark', age: 39 },
         { name: 'John', age: 38 },
       ],
     };
+
     const event = {
       path: '/api/ghost/dev',
       pathParameters: { username: 'ghost', environment: 'dev' },
-      body: JSON.stringify(users),
+      body: JSON.stringify(body),
     };
 
     const response = await createEntityOrEntitySchemaWrapper(event);
