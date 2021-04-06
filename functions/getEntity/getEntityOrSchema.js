@@ -7,7 +7,7 @@ const {
 } = require('../../util/responseUtil');
 
 const { getEntity } = require('./getEntity');
-const { getSchema } = require('./getSchema');
+const { getSchema } = require('./getEntitySchema');
 
 const getEntityOrSchema = async (event) => {
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
