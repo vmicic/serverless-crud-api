@@ -11,52 +11,54 @@ const {
 const { getUserModel } = require('../../models/user');
 require('dotenv').config();
 
-test('is pagination more query params', () => {
-  const pathSegments = ['users'];
-  const queryParams = { page: 1, per_page: 2, name: 'John' };
-  expect(isPagination(pathSegments, queryParams)).toBeFalsy();
-});
+describe('is pagination', () => {
+  test('3 query params insted of 2', () => {
+    const pathSegments = ['users'];
+    const queryParams = { page: 1, per_page: 2, name: 'John' };
+    expect(isPagination(pathSegments, queryParams)).toBeFalsy();
+  });
 
-test('is pagination one query param', () => {
-  const pathSegments = ['users'];
-  const queryParams = { page: 1 };
-  expect(isPagination(pathSegments, queryParams)).toBeFalsy();
-});
+  test('one query param', () => {
+    const pathSegments = ['users'];
+    const queryParams = { page: 1 };
+    expect(isPagination(pathSegments, queryParams)).toBeFalsy();
+  });
 
-test('is pagination one wrong query param', () => {
-  const pathSegments = ['users'];
-  const queryParams = { page: 1, wrong: 2 };
-  expect(isPagination(pathSegments, queryParams)).toBeFalsy();
-});
+  test('one wrong query param', () => {
+    const pathSegments = ['users'];
+    const queryParams = { page: 1, wrong: 2 };
+    expect(isPagination(pathSegments, queryParams)).toBeFalsy();
+  });
 
-test('is pagination null query param', () => {
-  const pathSegments = ['users'];
-  const queryParams = null;
-  expect(isPagination(pathSegments, queryParams)).toBeFalsy();
-});
+  test('null query param', () => {
+    const pathSegments = ['users'];
+    const queryParams = null;
+    expect(isPagination(pathSegments, queryParams)).toBeFalsy();
+  });
 
-test('is pagination undefined query param', () => {
-  const pathSegments = ['users'];
-  const queryParams = undefined;
-  expect(isPagination(pathSegments, queryParams)).toBeFalsy();
-});
+  test('undefined query param', () => {
+    const pathSegments = ['users'];
+    const queryParams = undefined;
+    expect(isPagination(pathSegments, queryParams)).toBeFalsy();
+  });
 
-test('is pagination more query params', () => {
-  const pathSegments = ['users', 'some random id'];
-  const queryParams = { page: 1, per_page: 2 };
-  expect(isPagination(pathSegments, queryParams)).toBeFalsy();
-});
+  test('more query params', () => {
+    const pathSegments = ['users', 'some random id'];
+    const queryParams = { page: 1, per_page: 2 };
+    expect(isPagination(pathSegments, queryParams)).toBeFalsy();
+  });
 
-test('is pagination more query params', () => {
-  const pathSegments = ['users', 'some random id', 'comments'];
-  const queryParams = { page: 1, per_page: 2 };
-  expect(isPagination(pathSegments, queryParams)).toBeTruthy();
-});
+  test('valid query params long path', () => {
+    const pathSegments = ['users', 'some random id', 'comments'];
+    const queryParams = { page: 1, per_page: 2 };
+    expect(isPagination(pathSegments, queryParams)).toBeTruthy();
+  });
 
-test('is pagination more query params', () => {
-  const pathSegments = ['users'];
-  const queryParams = { page: 1, per_page: 2 };
-  expect(isPagination(pathSegments, queryParams)).toBeTruthy();
+  test('valid query params shallow path', () => {
+    const pathSegments = ['users'];
+    const queryParams = { page: 1, per_page: 2 };
+    expect(isPagination(pathSegments, queryParams)).toBeTruthy();
+  });
 });
 
 test('get entity db query shallow', () => {

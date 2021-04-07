@@ -45,4 +45,4 @@ const getSchema = async (event) => {
   return getResponse(schema);
 };
 
-module.exports = { getSchema };
+module.exports = { getSchema, getResponse };

@@ -111,7 +111,7 @@ const initializeDb = async () => {
   await mongoose.connection.close();
 };
 
-describe('get entity or schema wrapper', () => {
+describe('get entity or schema wrapper, get entity', () => {
   beforeAll(async () => initializeDb());
 
   test('get entity', async () => {
@@ -430,5 +430,112 @@ describe('get entity or schema wrapper', () => {
     const response = await getEntityOrSchemaWrapper(event);
     expect(response.statusCode).toBe(404);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+  });
+});
+
+const initDbWithSchema = async () => {
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  const User = getUserModel();
+  await User.deleteMany({});
+  const user = new User({ username: 'ghost' });
+  await user.save();
+  await User.findOneAndUpdate(
+    { username: 'ghost' },
+    { $push: { environments: [{ dev: {} }, { prod: {} }] } },
+    { useFindAndModify: false },
+  ).exec();
+
+  await User.updateOne(
+    { username: 'ghost' },
+    {
+      $set: {
+        entitySchemas: {
+          dev: {
+            users: {
+              name: 'string',
+              age: 'number',
+              comments: {
+                text: 'string',
+                ratings: { rating: 'number', date: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+  ).exec();
+
+  await mongoose.connection.close();
+};
+
+describe('get entity or schema wrapper, get schema', () => {
+  beforeEach(async () => initDbWithSchema());
+
+  test('get entity schema', async () => {
+    const event = {
+      path: '/api/ghost/dev/users/__describe',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+    };
+
+    const response = await getEntityOrSchemaWrapper(event);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
+    expect(JSON.parse(response.body)).toStrictEqual({
+      name: 'string',
+      age: 'number',
+      comments: {
+        text: 'string',
+        ratings: { rating: 'number', date: 'string' },
+      },
+    });
+  });
+
+  test('get nested entity schema', async () => {
+    const event = {
+      path: '/api/ghost/dev/users/comments/__describe',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+    };
+
+    const response = await getEntityOrSchemaWrapper(event);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
+    expect(JSON.parse(response.body)).toStrictEqual({
+      text: 'string',
+      ratings: { rating: 'number', date: 'string' },
+    });
+  });
+
+  test('get deeply nested entity schema', async () => {
+    const event = {
+      path: '/api/ghost/dev/users/comments/ratings/__describe',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+    };
+
+    const response = await getEntityOrSchemaWrapper(event);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
+    expect(JSON.parse(response.body)).toStrictEqual({
+      rating: 'number',
+      date: 'string',
+    });
+  });
+
+  test('no schema', async () => {
+    const event = {
+      path: '/api/ghost/dev/notexisting/__describe',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+    };
+
+    const response = await getEntityOrSchemaWrapper(event);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({ 'Content-type': 'application/json' });
+    expect(JSON.parse(response.body)).toStrictEqual({});
   });
 });
