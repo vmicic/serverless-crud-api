@@ -20,4 +20,4 @@ const validateInput = (event) => {
   validateIds(event.path);
 };
 
-module.exports = { validateInput };
+module.exports = { validateInput, validateIds };
