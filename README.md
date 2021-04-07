@@ -31,9 +31,7 @@ In project root:
 }'`
 
 - update entity:  
-`curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users/6024e2ef7a2360aa6522e9ef' --header 'Content-Type: application/json' --data-raw '{
-    "name": "John"
-}'`
+`curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users' --header 'Content-Type: application/json' --data-raw '[{"name": "Jane", "age": 38}]'`
 
 
 - update entity with merge:  
