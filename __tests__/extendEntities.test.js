@@ -6,221 +6,236 @@ const {
   getSelectorAndFilters,
   replaceEntityQuery,
   addToExistingEntityQuery,
-  extendEntity,
-} = require('../functions/extendEntities');
+  extendEntityWrapper,
+} = require('../functions/extendEntity/extendEntity');
 const { getUserModel } = require('../models/user');
 require('dotenv').config();
 
-test('add ids for objects', () => {
-  const users = [{ name: 'Johnatan' }, { name: 'Michael' }];
-  addIdForObjects(users);
-  users.forEach((user) => {
-    expect(user._id).not.toBeNull();
+describe('add ids for objects', () => {
+  test('no nested objects', () => {
+    const users = [{ name: 'Johnatan' }, { name: 'Michael' }];
+    addIdForObjects(users);
+    users.forEach((user) => {
+      expect(user._id).not.toBeNull();
+    });
+  });
+
+  test('nested objects', () => {
+    const users = [
+      { name: 'Johnatan' },
+      { name: 'Michael' },
+      { name: 'Kim', posts: [{ text: 'first post' }, { text: 'second post' }] },
+    ];
+    addIdForObjects(users);
+    users.forEach((user) => {
+      expect(user._id).not.toBeUndefined();
+    });
+    users[2].posts.forEach((post) => {
+      expect(post._id).not.toBeUndefined();
+    });
+  });
+  test('nested objects no ids for fields', () => {
+    const users = [
+      { name: 'Johnatan' },
+      { name: 'Michael', family: { father: 'Ada' } },
+      { name: 'Kim', posts: [{ text: 'first post' }, { text: 'second post' }] },
+    ];
+    addIdForObjects(users);
+    expect(users[1].family._id).toBeUndefined();
   });
 });
 
-test('add ids for nested objects', () => {
-  const users = [
-    { name: 'Johnatan' },
-    { name: 'Michael' },
-    { name: 'Kim', posts: [{ text: 'first post' }, { text: 'second post' }] },
-  ];
-  addIdForObjects(users);
-  users.forEach((user) => {
-    expect(user._id).not.toBeUndefined();
+describe('add id for array in field', () => {
+  test('add ids for field array', () => {
+    const user = {
+      name: 'Michale',
+      posts: [{ text: 'first' }, { text: 'second' }],
+    };
+    addIdForArrayInField(user);
+    user.posts.forEach((post) => {
+      expect(post._id).not.toBeUndefined();
+    });
+    expect(user._id).toBeUndefined();
   });
-  users[2].posts.forEach((post) => {
-    expect(post._id).not.toBeUndefined();
-  });
 });
 
-test('add ids for nested objects no ids for fields', () => {
-  const users = [
-    { name: 'Johnatan' },
-    { name: 'Michael', family: { father: 'Ada' } },
-    { name: 'Kim', posts: [{ text: 'first post' }, { text: 'second post' }] },
-  ];
-  addIdForObjects(users);
-  expect(users[1].family._id).toBeUndefined();
-});
+describe('get selector and filters', () => {
+  test('no nested', () => {
+    const pathSegments = ['users', '601d293e69922540da9eeee4'];
+    const env = 'dev';
+    const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
 
-test('add ids for field array', () => {
-  const user = {
-    name: 'Michale',
-    posts: [{ text: 'first' }, { text: 'second' }],
-  };
-  addIdForArrayInField(user);
-  user.posts.forEach((post) => {
-    expect(post._id).not.toBeUndefined();
-  });
-  expect(user._id).toBeUndefined();
-});
-
-test('get selector and filters', () => {
-  const pathSegments = ['users', '601d293e69922540da9eeee4'];
-  const env = 'dev';
-  const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
-
-  const { selector, filters } = getSelectorAndFilters(pathSegments, env);
-  expect(selector).toEqual('environments.$[envId].dev.users.$[usersId]');
-  expect(filters).toEqual([
-    { 'envId.dev': { $exists: true } },
-    { 'usersId._id': userId },
-  ]);
-});
-
-test('get selector and filters nested', () => {
-  const pathSegments = [
-    'users',
-    '601d293e69922540da9eeee4',
-    'posts',
-    '601d293e69922540da9eeee9',
-  ];
-  const env = 'dev';
-  const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
-  const postId = mongoose.Types.ObjectId('601d293e69922540da9eeee9');
-
-  const { selector, filters } = getSelectorAndFilters(pathSegments, env);
-  expect(selector).toEqual(
-    'environments.$[envId].dev.users.$[usersId].posts.$[postsId]',
-  );
-  expect(filters).toEqual([
-    { 'envId.dev': { $exists: true } },
-    { 'usersId._id': userId },
-    { 'postsId._id': postId },
-  ]);
-});
-
-test('replace entity query', () => {
-  const env = 'dev';
-  const pathSegments = ['users', '601d293e69922540da9eeee4'];
-  const entity = { name: 'John' };
-  const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
-
-  const { update, options } = replaceEntityQuery(env, pathSegments, entity);
-  expect(update).toEqual({
-    $set: { 'environments.$[envId].dev.users.$[usersId]': { name: 'John' } },
-  });
-  expect(options).toEqual({
-    arrayFilters: [
+    const { selector, filters } = getSelectorAndFilters(pathSegments, env);
+    expect(selector).toEqual('environments.$[envId].dev.users.$[usersId]');
+    expect(filters).toEqual([
       { 'envId.dev': { $exists: true } },
       { 'usersId._id': userId },
-    ],
+    ]);
   });
-});
 
-test('replace nested entity query', () => {
-  const env = 'dev';
-  const pathSegments = [
-    'users',
-    '601d293e69922540da9eeee4',
-    'posts',
-    '601d28e95e9f774d3e0f2461',
-  ];
-  const entity = { name: 'John' };
-  const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
-  const postId = mongoose.Types.ObjectId('601d28e95e9f774d3e0f2461');
+  test('nested', () => {
+    const pathSegments = [
+      'users',
+      '601d293e69922540da9eeee4',
+      'posts',
+      '601d293e69922540da9eeee9',
+    ];
+    const env = 'dev';
+    const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
+    const postId = mongoose.Types.ObjectId('601d293e69922540da9eeee9');
 
-  const { update, options } = replaceEntityQuery(env, pathSegments, entity);
-  expect(update).toEqual({
-    $set: {
-      'environments.$[envId].dev.users.$[usersId].posts.$[postsId]': {
-        name: 'John',
-      },
-    },
-  });
-  expect(options).toEqual({
-    arrayFilters: [
+    const { selector, filters } = getSelectorAndFilters(pathSegments, env);
+    expect(selector).toEqual(
+      'environments.$[envId].dev.users.$[usersId].posts.$[postsId]',
+    );
+    expect(filters).toEqual([
       { 'envId.dev': { $exists: true } },
       { 'usersId._id': userId },
       { 'postsId._id': postId },
-    ],
+    ]);
   });
 });
 
-test('replace nested entity multiple fields query', () => {
-  const env = 'dev';
-  const pathSegments = [
-    'users',
-    '601d293e69922540da9eeee4',
-    'posts',
-    '601d28e95e9f774d3e0f2461',
-  ];
-  const entity = { name: 'John', age: 20 };
-  const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
-  const postId = mongoose.Types.ObjectId('601d28e95e9f774d3e0f2461');
+describe('replace entity query', () => {
+  test('no nested', () => {
+    const env = 'dev';
+    const pathSegments = ['users', '601d293e69922540da9eeee4'];
+    const entity = { name: 'John' };
+    const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
 
-  const { update, options } = replaceEntityQuery(env, pathSegments, entity);
-  expect(update).toEqual({
-    $set: {
-      'environments.$[envId].dev.users.$[usersId].posts.$[postsId]': {
-        name: 'John',
-        age: 20,
+    const { update, options } = replaceEntityQuery(env, pathSegments, entity);
+    expect(update).toEqual({
+      $set: { 'environments.$[envId].dev.users.$[usersId]': { name: 'John' } },
+    });
+    expect(options).toEqual({
+      arrayFilters: [
+        { 'envId.dev': { $exists: true } },
+        { 'usersId._id': userId },
+      ],
+    });
+  });
+
+  test('nested entity query', () => {
+    const env = 'dev';
+    const pathSegments = [
+      'users',
+      '601d293e69922540da9eeee4',
+      'posts',
+      '601d28e95e9f774d3e0f2461',
+    ];
+    const entity = { name: 'John' };
+    const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
+    const postId = mongoose.Types.ObjectId('601d28e95e9f774d3e0f2461');
+
+    const { update, options } = replaceEntityQuery(env, pathSegments, entity);
+    expect(update).toEqual({
+      $set: {
+        'environments.$[envId].dev.users.$[usersId].posts.$[postsId]': {
+          name: 'John',
+        },
       },
-    },
+    });
+    expect(options).toEqual({
+      arrayFilters: [
+        { 'envId.dev': { $exists: true } },
+        { 'usersId._id': userId },
+        { 'postsId._id': postId },
+      ],
+    });
   });
-  expect(options).toEqual({
-    arrayFilters: [
-      { 'envId.dev': { $exists: true } },
-      { 'usersId._id': userId },
-      { 'postsId._id': postId },
-    ],
+
+  test('nested entity multiple fields query', () => {
+    const env = 'dev';
+    const pathSegments = [
+      'users',
+      '601d293e69922540da9eeee4',
+      'posts',
+      '601d28e95e9f774d3e0f2461',
+    ];
+    const entity = { name: 'John', age: 20 };
+    const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee4');
+    const postId = mongoose.Types.ObjectId('601d28e95e9f774d3e0f2461');
+
+    const { update, options } = replaceEntityQuery(env, pathSegments, entity);
+    expect(update).toEqual({
+      $set: {
+        'environments.$[envId].dev.users.$[usersId].posts.$[postsId]': {
+          name: 'John',
+          age: 20,
+        },
+      },
+    });
+    expect(options).toEqual({
+      arrayFilters: [
+        { 'envId.dev': { $exists: true } },
+        { 'usersId._id': userId },
+        { 'postsId._id': postId },
+      ],
+    });
   });
 });
 
-test('add to existing entity query', () => {
-  const env = 'dev';
-  const pathSegments = ['users'];
-  const entities = [
-    { name: 'Mich', _id: mongoose.Types.ObjectId('601d293e69922540da9eeee4') },
-    {
-      name: 'Serena',
-      _id: mongoose.Types.ObjectId('601d28e95e9f774d3e0f2461'),
-    },
-  ];
-
-  const { update, options } = addToExistingEntityQuery(
-    env,
-    pathSegments,
-    entities,
-  );
-  expect(update).toEqual({
-    $push: { 'environments.$[envId].dev.users': { $each: entities } },
-  });
-  expect(options).toEqual({
-    arrayFilters: [{ 'envId.dev': { $exists: true } }],
-  });
-});
-
-test('add to existing entity query', () => {
-  const env = 'dev';
-  const pathSegments = ['users', '601d293e69922540da9eeee9', 'posts'];
-  const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee9');
-  const entities = [
-    { text: 'hello', _id: mongoose.Types.ObjectId('601d293e69922540da9eeee4') },
-    {
-      text: 'bye',
-      _id: mongoose.Types.ObjectId('601d28e95e9f774d3e0f2461'),
-    },
-  ];
-
-  const { update, options } = addToExistingEntityQuery(
-    env,
-    pathSegments,
-    entities,
-  );
-  expect(update).toEqual({
-    $push: {
-      'environments.$[envId].dev.users.$[usersId].posts': { $each: entities },
-    },
-  });
-  expect(options).toEqual({
-    arrayFilters: [
-      { 'envId.dev': { $exists: true } },
+describe('add to existing enitity query', () => {
+  test('add shallow entity', () => {
+    const env = 'dev';
+    const pathSegments = ['users'];
+    const entities = [
       {
-        'usersId._id': userId,
+        name: 'Mich',
+        _id: mongoose.Types.ObjectId('601d293e69922540da9eeee4'),
       },
-    ],
+      {
+        name: 'Serena',
+        _id: mongoose.Types.ObjectId('601d28e95e9f774d3e0f2461'),
+      },
+    ];
+
+    const { update, options } = addToExistingEntityQuery(
+      env,
+      pathSegments,
+      entities,
+    );
+    expect(update).toEqual({
+      $push: { 'environments.$[envId].dev.users': { $each: entities } },
+    });
+    expect(options).toEqual({
+      arrayFilters: [{ 'envId.dev': { $exists: true } }],
+    });
+  });
+
+  test('add deep entity', () => {
+    const env = 'dev';
+    const pathSegments = ['users', '601d293e69922540da9eeee9', 'posts'];
+    const userId = mongoose.Types.ObjectId('601d293e69922540da9eeee9');
+    const entities = [
+      {
+        text: 'hello',
+        _id: mongoose.Types.ObjectId('601d293e69922540da9eeee4'),
+      },
+      {
+        text: 'bye',
+        _id: mongoose.Types.ObjectId('601d28e95e9f774d3e0f2461'),
+      },
+    ];
+
+    const { update, options } = addToExistingEntityQuery(
+      env,
+      pathSegments,
+      entities,
+    );
+    expect(update).toEqual({
+      $push: {
+        'environments.$[envId].dev.users.$[usersId].posts': { $each: entities },
+      },
+    });
+    expect(options).toEqual({
+      arrayFilters: [
+        { 'envId.dev': { $exists: true } },
+        {
+          'usersId._id': userId,
+        },
+      ],
+    });
   });
 });
 
@@ -300,7 +315,7 @@ describe('extend entity tests', () => {
       body: '"age":20}',
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -314,7 +329,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUsers),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -328,7 +343,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUsers),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -342,7 +357,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUsers),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -356,7 +371,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUsers),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
@@ -370,7 +385,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newPost),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -395,7 +410,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUsers),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -421,7 +436,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUsers),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -447,7 +462,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(posts),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -473,7 +488,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(posts),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -499,7 +514,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUser),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -526,7 +541,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUser),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -554,7 +569,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUser),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -583,7 +598,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newUser),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -613,7 +628,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newPost),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -642,7 +657,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newPost),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -672,7 +687,7 @@ describe('extend entity tests', () => {
       body: JSON.stringify(newPost),
     };
 
-    const response = await extendEntity(event);
+    const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,

@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
-const { getUserModel } = require('../models/user.js');
-const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
-const { successResponse, errorResponse } = require('../util/responseUtil');
+const { getUserModel } = require('../../models/user.js');
+const { getSegmentsWithoutUsernameAndEnv } = require('../../util/urlUtils');
+const {
+  successResponse,
+  errorResponse,
+  errorResponseFromError,
+} = require('../../util/responseUtil');
+const { validateInput } = require('./validateInput.js');
 require('dotenv').config();
 
 /* eslint-disable no-param-reassign */
@@ -24,6 +29,15 @@ const addIdForArrayInField = (object) => {
       addIdForObjects(object[field]);
     }
   });
+};
+
+const addIds = (body, pathSegments) => {
+  if (pathSegments.length % 2 === 1) {
+    addIdForObjects(body);
+  } else {
+    body._id = mongoose.Types.ObjectId(pathSegments.slice(-1).pop());
+    addIdForArrayInField(body);
+  }
 };
 
 const getFirstFilter = (env) => {
@@ -100,85 +114,47 @@ const idsInvalid = (pathSegments) => {
 };
 
 const extendEntity = async (event) => {
+  validateInput(event);
+
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+  const body = JSON.parse(event.body);
 
-  if (idsInvalid(pathSegments)) {
-    return errorResponse(
-      400,
-      { 'Content-type': 'text/plain' },
-      'Id in path is invalid.',
-    );
-  }
-
-  let bodyPayload;
-  try {
-    bodyPayload = JSON.parse(event.body);
-  } catch (error) {
-    return errorResponse(
-      400,
-      { 'Content-type': 'text/plain' },
-      'Invalid body.',
-    );
-  }
-  if (pathSegments.length % 2 === 1) {
-    if (!Array.isArray(bodyPayload)) {
-      return errorResponse(
-        400,
-        { 'Content-type': 'text/plain' },
-        'Invalid body.',
-      );
-    }
-    addIdForObjects(bodyPayload);
-  } else {
-    if (Array.isArray(bodyPayload)) {
-      return errorResponse(
-        400,
-        { 'Content-type': 'text/plain' },
-        'Invalid body.',
-      );
-    }
-    if (!(typeof bodyPayload === 'object' && bodyPayload !== null)) {
-      return errorResponse(
-        400,
-        { 'Content-type': 'text/plain' },
-        'Invalid body.',
-      );
-    }
-    bodyPayload._id = mongoose.Types.ObjectId(pathSegments.slice(-1).pop());
-    addIdForArrayInField(bodyPayload);
-  }
+  addIds(body, pathSegments);
 
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
-  const query = {
-    username,
-  };
-
+  const query = { username };
   if (pathSegments.length === 1) {
     const entitySelector = `environments.${environment}.${pathSegments[0]}`;
     query[entitySelector] = { $exists: true };
   }
-
-  const { update, options } = getQueryParams(
-    environment,
-    pathSegments,
-    bodyPayload,
-  );
+  const { update, options } = getQueryParams(environment, pathSegments, body);
 
   const User = getUserModel();
+  await User.updateOne(query, update, options);
+  await mongoose.connection.close();
+
+  return successResponse(204, { 'Content-type': 'text/plain' });
+};
+
+const extendEntityWrapper = async (event) => {
   try {
-    await User.updateOne(query, update, options);
+    return await extendEntity(event);
   } catch (error) {
     await mongoose.connection.close();
-    return errorResponse(400, { 'Content-type': 'text/plain' }, 'Bad request.');
+    if (error.statusCode !== undefined) {
+      return errorResponseFromError(error);
+    }
+    return errorResponse(
+      500,
+      { 'Content-type': 'text/plain' },
+      'Unexpected error happened. Please try again.',
+    );
   }
-
-  await mongoose.connection.close();
-  return successResponse(204, { 'Content-type': 'text/plain' });
 };
 
 module.exports = {
@@ -189,4 +165,5 @@ module.exports = {
   replaceEntityQuery,
   addToExistingEntityQuery,
   idsInvalid,
+  extendEntityWrapper,
 };

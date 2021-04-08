@@ -25,11 +25,7 @@ const getUpdate = async (query, environment, entitySchema, entityName) => {
     entitySchemas: 1,
   });
   if (document === null) {
-    const error = new BadRequestError(
-      404,
-      'Username or environment not found.',
-    );
-    throw error;
+    throw new BadRequestError(404, 'Username or environment not found.');
   }
 
   const oldEntitySchemas = document.entitySchemas;

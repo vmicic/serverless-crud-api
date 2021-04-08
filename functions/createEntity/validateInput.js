@@ -23,13 +23,11 @@ const validateBodyWithoutSchema = (body) => {
 
 const validateBodyWithSchema = (body) => {
   if (!('__meta' in body)) {
-    const error = new BadRequestError(400, 'Invalid body.');
-    throw error;
+    throw new BadRequestError(400, 'Invalid body.');
   }
 
   if (Object.keys(body.__meta).length !== 1) {
-    const error = new BadRequestError(400, 'Properties in __meta are invalid.');
-    throw error;
+    throw new BadRequestError(400, 'Properties in __meta are invalid.');
   }
 
   if (
@@ -37,15 +35,13 @@ const validateBodyWithSchema = (body) => {
     !('type' in body.__meta && body.__meta.type) &&
     !('force' in body.__meta && body.__meta.force)
   ) {
-    const error = new BadRequestError(400, 'Property __meta is invalid.');
-    throw error;
+    throw new BadRequestError(400, 'Property __meta is invalid.');
   }
 };
 
 const validateProperties = (body) => {
   if (Object.keys(body).length !== 1 && Object.keys(body).length !== 2) {
-    const error = new BadRequestError(400, 'Invalid body.');
-    throw error;
+    throw new BadRequestError(400, 'Invalid body.');
   }
 
   if (Object.keys(body).length === 1) {

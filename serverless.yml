@@ -105,7 +105,7 @@ functions:
           path: /api/{username}/{environment}
           method: POST
   updateEntity:
-    handler: functions/extendEntities.extendEntity
+    handler: functions/extendEntity/extendEntity.extendEntityWrapper
     events:
       - httpApi:
           path: /api/{username}/{environment}/{any+}
