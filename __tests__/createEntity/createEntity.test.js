@@ -228,10 +228,10 @@ describe('validate type', () => {
   });
 });
 
-describe('validate entity with schema', () => {
+describe('validate entity with schema no optional types', () => {
   test('number of keys dont match', () => {
     const schema = { name: 'string', age: 'number' };
-    const entities = [{ name: 'John' }];
+    const entities = [{ name: 'John', age: 20, lastname: 'Robinson' }];
 
     expect(() => {
       validateEntityWithSchema(entities, schema);
@@ -241,7 +241,7 @@ describe('validate entity with schema', () => {
   test('field doesnt exist in schema', () => {
     const schema = { name: 'string', age: 'number' };
     const entities = [
-      { name: 'John', age: 30 },
+      // { name: 'John', age: 30 },
       { name: 'Michale', lastname: 'Thompson' },
     ];
 
@@ -282,7 +282,9 @@ describe('validate entity with schema', () => {
       name: 'string',
       comments: { text: 'string', rating: 'number' },
     };
-    const entities = [{ name: 'John', comments: [{ text: 'hello' }] }];
+    const entities = [
+      { name: 'John', comments: [{ text: 'hello', rating: 5, reply: 'hey' }] },
+    ];
 
     expect(() => {
       validateEntityWithSchema(entities, schema);
@@ -339,6 +341,25 @@ const initDbWithoutSchema = async () => {
   ).exec();
   await mongoose.connection.close();
 };
+
+describe('validate entity with schema with optional type', () => {
+  test('testing optional', () => {
+    const schema = {
+      name: 'string?',
+      comments: { text: 'string', rating: 'number' },
+    };
+    const entities = [
+      {
+        name: 'John',
+        comments: [{ text: 'hello', rating: 5, reply: 'hello' }],
+      },
+    ];
+
+    expect(() => {
+      validateEntityWithSchema(entities, schema);
+    }).toThrow('Number of fields in entity is not correct');
+  });
+});
 
 describe('create entity in db', () => {
   test('username doesnt exist', async () => {
@@ -569,7 +590,7 @@ describe('create entity with schema no nested', () => {
   beforeEach(async () => initDbWithSchema());
 
   test('number of keys dont match', async () => {
-    const users = { users: [{ name: 'John' }] };
+    const users = { users: [{ name: 'John', age: 20, lastname: 'Robinson' }] };
     const event = {
       path: '/api/ghost/dev',
       pathParameters: { username: 'ghost', environment: 'dev' },

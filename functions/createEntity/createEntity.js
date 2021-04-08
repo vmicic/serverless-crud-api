@@ -61,26 +61,29 @@ const getEntitySchema = async (event) => {
 
 const validateType = (value, fieldTypeInSchema) => {
   const receivedType = typeof value;
+  let expectedType = fieldTypeInSchema;
+
+  const lastCharInFieldType = fieldTypeInSchema.slice(-1);
+  if (lastCharInFieldType === '?') {
+    expectedType = fieldTypeInSchema.slice(0, -1);
+  }
 
   if (receivedType === 'object') {
-    if (fieldTypeInSchema === 'array') {
+    if (expectedType === 'array') {
       if (!Array.isArray(value)) {
         throw new BadRequestError(417, 'Expected array got object.');
       }
     } else {
-      throw new BadRequestError(
-        417,
-        `Expected ${fieldTypeInSchema} got object.`,
-      );
+      throw new BadRequestError(417, `Expected ${expectedType} got object.`);
     }
 
     return true;
   }
 
-  if (receivedType !== fieldTypeInSchema) {
+  if (receivedType !== expectedType) {
     throw new BadRequestError(
       417,
-      `Expected ${fieldTypeInSchema} got ${receivedType}.`,
+      `Expected ${expectedType} got ${receivedType}.`,
     );
   }
 
@@ -93,26 +96,56 @@ const validateFieldExistsInSchema = (field, entity) => {
   }
 };
 
+const ifFieldExists = (schemaFieldNameType, entity) => {
+  const [fieldName, fieldType] = schemaFieldNameType;
+  // if field is not sub-entity
+  if (typeof fieldType !== 'object') {
+    const lastCharInFieldType = fieldType.slice(-1);
+    if (lastCharInFieldType === '?') {
+      return fieldName in entity;
+    }
+
+    if (fieldName in entity) {
+      return true;
+    }
+
+    throw new BadRequestError(
+      417,
+      `Entity does not contain ${fieldName} field.`,
+    );
+  }
+
+  // if field is sub-entity just verify that it exists
+  validateFieldExistsInSchema(fieldName, entity);
+
+  return true;
+};
+
 const validateEntityWithSchema = (entities, schema) => {
   entities.forEach((entity) => {
+    let expectedNumberOfProperties = 0;
+    Object.entries(schema).forEach((schemaFieldNameType) => {
+      const [fieldName, fieldType] = schemaFieldNameType;
+
+      const fieldExists = ifFieldExists(schemaFieldNameType, entity);
+      expectedNumberOfProperties = fieldExists
+        ? expectedNumberOfProperties + 1
+        : expectedNumberOfProperties;
+
+      if (typeof fieldType === 'object') {
+        validateEntityWithSchema(entity[fieldName], fieldType);
+      } else if (fieldExists) {
+        validateType(entity[fieldName], fieldType);
+      }
+    });
+
     const numberOfUniqueProperties = new Set(Object.keys(entity)).size;
-    if (numberOfUniqueProperties !== Object.keys(schema).length) {
+    if (numberOfUniqueProperties !== expectedNumberOfProperties) {
       throw new BadRequestError(
         417,
         'Number of fields in entity is not correct.',
       );
     }
-
-    Object.entries(schema).forEach((schemaFieldNameType) => {
-      const [fieldName, fieldType] = schemaFieldNameType;
-      validateFieldExistsInSchema(fieldName, entity);
-
-      if (typeof fieldType === 'object') {
-        validateEntityWithSchema(entity[fieldName], fieldType);
-      } else {
-        validateType(entity[fieldName], fieldType);
-      }
-    });
   });
 };
 

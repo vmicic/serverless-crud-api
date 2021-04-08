@@ -359,7 +359,7 @@ const initializeDb = async () => {
   await mongoose.connection.close();
 };
 
-describe('extend entity', () => {
+describe('extend entity wrapper', () => {
   beforeEach(async () => initializeDb());
 
   test('invalid body error when parsing json', async () => {
