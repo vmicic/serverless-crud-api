@@ -162,6 +162,7 @@ module.exports = {
   getSelectorAndFilters,
   addIdForObjects,
   addIdForArrayInField,
+  addIds,
   replaceEntityQuery,
   addToExistingEntityQuery,
   idsInvalid,

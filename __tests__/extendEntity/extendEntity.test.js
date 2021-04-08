@@ -7,8 +7,9 @@ const {
   replaceEntityQuery,
   addToExistingEntityQuery,
   extendEntityWrapper,
-} = require('../functions/extendEntity/extendEntity');
-const { getUserModel } = require('../models/user');
+  addIds,
+} = require('../../functions/extendEntity/extendEntity');
+const { getUserModel } = require('../../models/user');
 require('dotenv').config();
 
 describe('add ids for objects', () => {
@@ -56,6 +57,59 @@ describe('add id for array in field', () => {
       expect(post._id).not.toBeUndefined();
     });
     expect(user._id).toBeUndefined();
+  });
+});
+
+describe('add ids', () => {
+  test('add ids for objects no nested', () => {
+    const users = [{ name: 'Johnatan' }, { name: 'Michael' }];
+    const pathSegments = ['users'];
+    addIds(users, pathSegments);
+    users.forEach((user) => {
+      expect(user._id).not.toBeNull();
+    });
+  });
+
+  test('add ids for objects nested nested', () => {
+    const pathSegments = ['users'];
+    const users = [
+      { name: 'Johnatan' },
+      { name: 'Michael' },
+      { name: 'Kim', posts: [{ text: 'first post' }, { text: 'second post' }] },
+    ];
+    addIds(users, pathSegments);
+    users.forEach((user) => {
+      expect(user._id).not.toBeUndefined();
+    });
+    users[2].posts.forEach((post) => {
+      expect(post._id).not.toBeUndefined();
+    });
+  });
+
+  test('add ids for nested objects no ids for fields', () => {
+    const pathSegments = ['users'];
+    const users = [
+      { name: 'Johnatan' },
+      { name: 'Michael', family: { father: 'Ada' } },
+      { name: 'Kim', posts: [{ text: 'first post' }, { text: 'second post' }] },
+    ];
+    addIds(users, pathSegments);
+    expect(users[1].family._id).toBeUndefined();
+  });
+
+  test('add ids for field array', () => {
+    const pathSegments = ['users', '6017d641860f43b553b21603'];
+    const user = {
+      name: 'Michale',
+      posts: [{ text: 'first' }, { text: 'second' }],
+    };
+    addIds(user, pathSegments);
+    user.posts.forEach((post) => {
+      expect(post._id).not.toBeUndefined();
+    });
+    expect(user._id).toStrictEqual(
+      mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+    );
   });
 });
 
@@ -305,7 +359,7 @@ const initializeDb = async () => {
   await mongoose.connection.close();
 };
 
-describe('extend entity tests', () => {
+describe('extend entity', () => {
   beforeEach(async () => initializeDb());
 
   test('invalid body error when parsing json', async () => {
@@ -317,6 +371,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
+    expect(response.body).toMatch('Invalid body.');
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
@@ -331,6 +386,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
+    expect(response.body).toMatch('Expected array in body.');
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
@@ -345,6 +401,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
+    expect(response.body).toMatch('Id in path is invalid.');
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
@@ -359,6 +416,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
+    expect(response.body).toMatch('Expected object got array in body.');
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
@@ -373,6 +431,7 @@ describe('extend entity tests', () => {
 
     const response = await extendEntityWrapper(event);
     expect(response.statusCode).toBe(400);
+    expect(response.body).toMatch('Expected object in body.');
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
