@@ -73,6 +73,8 @@ const validateType = (value, fieldTypeInSchema) => {
       if (!Array.isArray(value)) {
         throw new BadRequestError(417, 'Expected array got object.');
       }
+    } else if (Array.isArray(value)) {
+      throw new BadRequestError(417, `Expected ${expectedType} got array.`);
     } else {
       throw new BadRequestError(417, `Expected ${expectedType} got object.`);
     }
@@ -90,13 +92,13 @@ const validateType = (value, fieldTypeInSchema) => {
   return true;
 };
 
-const validateFieldExistsInSchema = (field, entity) => {
+const validateFieldExistsInEntity = (field, entity) => {
   if (!(field in entity)) {
     throw new BadRequestError(417, `Entity does not contain ${field} field.`);
   }
 };
 
-const ifFieldExists = (schemaFieldNameType, entity) => {
+const ifFieldExistsInEntity = (schemaFieldNameType, entity) => {
   const [fieldName, fieldType] = schemaFieldNameType;
   // if field is not sub-entity
   if (typeof fieldType !== 'object') {
@@ -116,37 +118,46 @@ const ifFieldExists = (schemaFieldNameType, entity) => {
   }
 
   // if field is sub-entity just verify that it exists
-  validateFieldExistsInSchema(fieldName, entity);
+  validateFieldExistsInEntity(fieldName, entity);
 
   return true;
 };
 
-const validateEntityWithSchema = (entities, schema) => {
+const validateNumberOfFields = (entity, expectedFieldsCount) => {
+  const uniqueFieldsCount = new Set(Object.keys(entity)).size;
+  if (uniqueFieldsCount !== expectedFieldsCount) {
+    throw new BadRequestError(
+      417,
+      'Entity contains fields not existing in schema.',
+    );
+  }
+};
+
+const validateEntitiesWithSchema = (entities, schema) => {
   entities.forEach((entity) => {
-    let expectedNumberOfProperties = 0;
-    Object.entries(schema).forEach((schemaFieldNameType) => {
-      const [fieldName, fieldType] = schemaFieldNameType;
+    // eslint-disable-next-line no-use-before-define
+    const fieldsCount = validateEntityAndGetNumberOfFields(entity, schema);
+    validateNumberOfFields(entity, fieldsCount);
+  });
+};
 
-      const fieldExists = ifFieldExists(schemaFieldNameType, entity);
-      expectedNumberOfProperties = fieldExists
-        ? expectedNumberOfProperties + 1
-        : expectedNumberOfProperties;
+const validateEntityAndGetNumberOfFields = (entity, schema) => {
+  let fieldsCount = 0;
+  Object.entries(schema).forEach((schemaFieldNameType) => {
+    const [fieldName, fieldType] = schemaFieldNameType;
 
-      if (typeof fieldType === 'object') {
-        validateEntityWithSchema(entity[fieldName], fieldType);
-      } else if (fieldExists) {
-        validateType(entity[fieldName], fieldType);
-      }
-    });
+    const fieldExists = ifFieldExistsInEntity(schemaFieldNameType, entity);
+    fieldsCount = fieldExists ? fieldsCount + 1 : fieldsCount;
 
-    const numberOfUniqueProperties = new Set(Object.keys(entity)).size;
-    if (numberOfUniqueProperties !== expectedNumberOfProperties) {
-      throw new BadRequestError(
-        417,
-        'Number of fields in entity is not correct.',
-      );
+    // if field is sub-entity
+    if (typeof fieldType === 'object') {
+      validateEntitiesWithSchema(entity[fieldName], fieldType);
+    } else if (fieldExists) {
+      validateType(entity[fieldName], fieldType);
     }
   });
+
+  return fieldsCount;
 };
 
 const createEntityInDb = async (body, event) => {
@@ -205,7 +216,7 @@ const createEntity = async (event) => {
   const { schemaExists, schema } = await getEntitySchema(event);
   if (schemaExists) {
     const entityName = Object.keys(body).find((key) => key !== '__meta');
-    validateEntityWithSchema(body[entityName], schema);
+    validateEntitiesWithSchema(body[entityName], schema);
   }
 
   const result = await createEntityInDb(body, event);
@@ -219,8 +230,11 @@ module.exports = {
   getUpdate,
   getOptions,
   getEntitySchema,
-  validateFieldExistsInSchema,
+  validateFieldExistsInEntity,
   validateType,
-  validateEntityWithSchema,
+  validateEntitiesWithSchema,
+  validateNumberOfFields,
   createEntityInDb,
+  ifFieldExistsInEntity,
+  validateEntityAndGetNumberOfFields,
 };

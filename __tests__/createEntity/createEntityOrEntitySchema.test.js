@@ -464,7 +464,9 @@ describe('create entity with schema no nested', () => {
 
     const response = await createEntityOrEntitySchemaWrapper(event);
     expect(response.statusCode).toEqual(417);
-    expect(response.body).toMatch('Number of fields in entity is not correct.');
+    expect(response.body).toMatch(
+      'Entity contains fields not existing in schema.',
+    );
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
@@ -628,7 +630,9 @@ describe('create entity with schema nested', () => {
 
     const response = await createEntityOrEntitySchemaWrapper(event);
     expect(response.statusCode).toEqual(417);
-    expect(response.body).toMatch('Number of fields in entity is not correct.');
+    expect(response.body).toMatch(
+      'Entity contains fields not existing in schema.',
+    );
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 

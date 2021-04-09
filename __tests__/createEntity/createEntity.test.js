@@ -5,11 +5,14 @@ const {
   getUpdate,
   getOptions,
   getEntitySchema,
-  validateFieldExistsInSchema,
+  validateFieldExistsInEntity,
   validateType,
-  validateEntityWithSchema,
+  validateEntitiesWithSchema,
   createEntityInDb,
   createEntity,
+  validateNumberOfFields,
+  ifFieldExistsInEntity,
+  validateEntityAndGetNumberOfFields,
 } = require('../../functions/createEntity/createEntity');
 require('dotenv').config();
 
@@ -172,7 +175,7 @@ describe('validate field exists in schema', () => {
     const field = 'name';
     const entity = { name: 'John' };
 
-    validateFieldExistsInSchema(field, entity);
+    validateFieldExistsInEntity(field, entity);
   });
 
   test('doesnt exist', () => {
@@ -180,8 +183,110 @@ describe('validate field exists in schema', () => {
     const entity = { name: 'John' };
 
     expect(() => {
-      validateFieldExistsInSchema(field, entity);
+      validateFieldExistsInEntity(field, entity);
     }).toThrow('Entity does not contain age field.');
+  });
+});
+
+describe('validate number of fields', () => {
+  test('more fields existing', () => {
+    const entity = { name: 'john', rating: 5 };
+    const expectedFieldsCount = 1;
+
+    expect(() => {
+      validateNumberOfFields(entity, expectedFieldsCount);
+    });
+  });
+
+  test('no error', () => {
+    const entity = { name: 'john', rating: 5 };
+    const expectedFieldsCount = 2;
+
+    expect(() => {
+      validateNumberOfFields(entity, expectedFieldsCount);
+    });
+  });
+
+  test('no error, array as field', () => {
+    const entity = { name: 'john', ratings: [{ rating: 5 }] };
+    const expectedFieldsCount = 2;
+
+    expect(() => {
+      validateNumberOfFields(entity, expectedFieldsCount);
+    });
+  });
+});
+
+describe('if field exists in entity no optional', () => {
+  test('field doesnt exist', () => {
+    const schemaFieldNameType = ['name', 'string'];
+    const entity = { rating: 5 };
+
+    expect(() => {
+      ifFieldExistsInEntity(schemaFieldNameType, entity);
+    }).toThrow('Entity does not contain name field');
+  });
+
+  test('field exist wrong type, no error', () => {
+    const schemaFieldNameType = ['name', 'string'];
+    const entity = { name: 5 };
+
+    ifFieldExistsInEntity(schemaFieldNameType, entity);
+  });
+
+  test('field exist right type, no error', () => {
+    const schemaFieldNameType = ['name', 'string'];
+    const entity = { name: 'hello' };
+
+    ifFieldExistsInEntity(schemaFieldNameType, entity);
+  });
+
+  test('field doesnt exists sub-entity', () => {
+    const schemaFieldNameType = [
+      'comments',
+      { text: 'string', rating: 'number' },
+    ];
+    const entity = { name: 'hello' };
+
+    expect(() => {
+      ifFieldExistsInEntity(schemaFieldNameType, entity);
+    }).toThrow('Entity does not contain comments field');
+  });
+});
+
+describe('if field exists in entity, optional', () => {
+  test('optional string field doesnt exist', () => {
+    const schemaFieldNameType = ['name', 'string?'];
+    const entity = { rating: 5 };
+
+    ifFieldExistsInEntity(schemaFieldNameType, entity);
+    const fieldExists = ifFieldExistsInEntity(schemaFieldNameType, entity);
+    expect(fieldExists).toBeFalsy();
+  });
+
+  test('optional object field doesnt exist', () => {
+    const schemaFieldNameType = ['name', 'object?'];
+    const entity = { rating: 5 };
+
+    ifFieldExistsInEntity(schemaFieldNameType, entity);
+    const fieldExists = ifFieldExistsInEntity(schemaFieldNameType, entity);
+    expect(fieldExists).toBeFalsy();
+  });
+
+  test('optional object field doesnt exist', () => {
+    const schemaFieldNameType = ['name', 'object?'];
+    const entity = { rating: 5 };
+
+    const fieldExists = ifFieldExistsInEntity(schemaFieldNameType, entity);
+    expect(fieldExists).toBeFalsy();
+  });
+
+  test('optional number field exist', () => {
+    const schemaFieldNameType = ['rating', 'number?'];
+    const entity = { rating: 5 };
+
+    const fieldExists = ifFieldExistsInEntity(schemaFieldNameType, entity);
+    expect(fieldExists).toBeTruthy();
   });
 });
 
@@ -234,19 +339,19 @@ describe('validate entity with schema no optional types', () => {
     const entities = [{ name: 'John', age: 20, lastname: 'Robinson' }];
 
     expect(() => {
-      validateEntityWithSchema(entities, schema);
-    }).toThrow('Number of fields in entity is not correct');
+      validateEntitiesWithSchema(entities, schema);
+    }).toThrow('Entity contains fields not existing in schema.');
   });
 
-  test('field doesnt exist in schema', () => {
+  test('entity does not contain mandatory field', () => {
     const schema = { name: 'string', age: 'number' };
     const entities = [
-      // { name: 'John', age: 30 },
+      { name: 'John', age: 30 },
       { name: 'Michale', lastname: 'Thompson' },
     ];
 
     expect(() => {
-      validateEntityWithSchema(entities, schema);
+      validateEntitiesWithSchema(entities, schema);
     }).toThrow('Entity does not contain age field.');
   });
 
@@ -255,7 +360,7 @@ describe('validate entity with schema no optional types', () => {
     const entities = [{ name: 'John', age: 'two' }];
 
     expect(() => {
-      validateEntityWithSchema(entities, schema);
+      validateEntitiesWithSchema(entities, schema);
     }).toThrow('Expected number got string.');
   });
 
@@ -263,7 +368,7 @@ describe('validate entity with schema no optional types', () => {
     const schema = { name: 'string', age: 'number' };
     const entities = [{ name: 'John', age: 20 }];
 
-    validateEntityWithSchema(entities, schema);
+    validateEntitiesWithSchema(entities, schema);
   });
 
   test('no error entity with properties with same name, no nested entities', () => {
@@ -274,7 +379,7 @@ describe('validate entity with schema no optional types', () => {
       { name: 'Michale', age: 20, name: 'Sebastian' },
     ];
 
-    validateEntityWithSchema(entities, schema);
+    validateEntitiesWithSchema(entities, schema);
   });
 
   test('number of keys dont match, nested entities', () => {
@@ -287,8 +392,8 @@ describe('validate entity with schema no optional types', () => {
     ];
 
     expect(() => {
-      validateEntityWithSchema(entities, schema);
-    }).toThrow('Number of fields in entity is not correct');
+      validateEntitiesWithSchema(entities, schema);
+    }).toThrow('Entity contains fields not existing in schema.');
   });
 
   test('field doesnt exist in schema, nested entities', () => {
@@ -299,7 +404,7 @@ describe('validate entity with schema no optional types', () => {
     const entities = [{ name: 'John', comments: [{ rating: 5 }] }];
 
     expect(() => {
-      validateEntityWithSchema(entities, schema);
+      validateEntitiesWithSchema(entities, schema);
     }).toThrow('Entity does not contain text field.');
   });
 
@@ -308,7 +413,7 @@ describe('validate entity with schema no optional types', () => {
     const entities = [{ name: 'John', comments: [{ rating: 'hello' }] }];
 
     expect(() => {
-      validateEntityWithSchema(entities, schema);
+      validateEntitiesWithSchema(entities, schema);
     }).toThrow('Expected number got string.');
   });
 
@@ -321,43 +426,168 @@ describe('validate entity with schema no optional types', () => {
       },
     ];
 
-    validateEntityWithSchema(entities, schema);
+    validateEntitiesWithSchema(entities, schema);
   });
 });
 
-const initDbWithoutSchema = async () => {
-  await mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-  const User = getUserModel();
-  await User.deleteMany({});
-  const user = new User({ username: 'ghost' });
-  await user.save();
-  await User.findOneAndUpdate(
-    { username: 'ghost' },
-    { $push: { environments: [{ dev: {} }, { prod: {} }] } },
-    { useFindAndModify: false },
-  ).exec();
-  await mongoose.connection.close();
-};
+describe('validate entities with schema, optional fields', () => {
+  test('number of fields dont match, more keys', () => {
+    const schema = { name: 'string?', age: 'number' };
+    const entities = [{ name: 'John', age: 20, lastname: 'Robinson' }];
 
-describe('validate entity with schema with optional type', () => {
-  test('testing optional', () => {
-    const schema = {
-      name: 'string?',
-      comments: { text: 'string', rating: 'number' },
-    };
+    expect(() => {
+      validateEntitiesWithSchema(entities, schema);
+    }).toThrow('Entity contains fields not existing in schema.');
+  });
+
+  test('entity doesnt contain mandatory field', () => {
+    const schema = { name: 'string?', age: 'number' };
     const entities = [
-      {
-        name: 'John',
-        comments: [{ text: 'hello', rating: 5, reply: 'hello' }],
-      },
+      { name: 'John', age: 30 },
+      { name: 'Michale', lastname: 'Thompson' },
     ];
 
     expect(() => {
-      validateEntityWithSchema(entities, schema);
-    }).toThrow('Number of fields in entity is not correct');
+      validateEntitiesWithSchema(entities, schema);
+    }).toThrow('Entity does not contain age field.');
+  });
+  test('field doesnt exist in schema', () => {
+    const schema = { name: 'string?', age: 'number' };
+    const entities = [
+      { name: 'John', age: 30 },
+      { name: 'Michale', lastname: 'Thompson', age: 20 },
+    ];
+
+    expect(() => {
+      validateEntitiesWithSchema(entities, schema);
+    }).toThrow('Entity contains fields not existing in schema.');
+  });
+  test('field type mismatch', () => {
+    const schema = { name: 'string?', age: 'number' };
+    const entities = [{ name: 'John', age: 'two' }];
+
+    expect(() => {
+      validateEntitiesWithSchema(entities, schema);
+    }).toThrow('Expected number got string.');
+  });
+
+  test('no error, no nested entities', () => {
+    const schema = { name: 'string?', age: 'number?' };
+    const entities = [{ name: 'John', age: 20 }];
+
+    validateEntitiesWithSchema(entities, schema);
+  });
+  test('field doesnt exist in schema, nested entities', () => {
+    const schema = {
+      name: 'string?',
+      comments: { text: 'string' },
+    };
+    const entities = [{ name: 'John', comments: [{ rating: 5 }] }];
+
+    expect(() => {
+      validateEntitiesWithSchema(entities, schema);
+    }).toThrow('Entity does not contain text field.');
+  });
+  test('no errors nested entities', () => {
+    const schema = { name: 'string?', comments: { text: 'string?' } };
+    const entities = [
+      {
+        name: 'John',
+        comments: [{ text: 'hello' }, { text: 'this is comment' }],
+      },
+    ];
+
+    validateEntitiesWithSchema(entities, schema);
+  });
+});
+
+describe('validate entity and get number of fields, no optional fields', () => {
+  test('invalid type, got string expected number', () => {
+    const schema = { rating: 'number', name: 'string', male: 'boolean' };
+    const entity = { rating: '2', name: 'John', male: true };
+
+    expect(() => {
+      validateEntityAndGetNumberOfFields(entity, schema);
+    }).toThrow('Expected number got string.');
+  });
+
+  test('invalid type, got boolean expected object', () => {
+    const schema = { rating: 'object', name: 'string', male: 'boolean' };
+    const entity = { rating: true, name: 'John', male: true };
+
+    expect(() => {
+      validateEntityAndGetNumberOfFields(entity, schema);
+    }).toThrow('Expected object got boolean.');
+  });
+
+  test('invalid type, got array expected string', () => {
+    const schema = { rating: 'string', name: 'string', male: 'boolean' };
+    const entity = { rating: [{ text: 'hello' }], name: 'John', male: true };
+
+    expect(() => {
+      validateEntityAndGetNumberOfFields(entity, schema);
+    }).toThrow('Expected string got array.');
+  });
+
+  test('valid types', () => {
+    const schema = { rating: 'string', name: 'string', male: 'boolean' };
+    const entity = { rating: 'text', name: 'John', male: true };
+
+    const fieldsCount = validateEntityAndGetNumberOfFields(entity, schema);
+    expect(fieldsCount).toBe(3);
+  });
+});
+
+describe('validate entity and get number of fields, optional fields', () => {
+  test('invalid type, got string expected number', () => {
+    const schema = { rating: 'number?', name: 'string', male: 'boolean' };
+    const entity = { rating: '2', name: 'John', male: true };
+
+    expect(() => {
+      validateEntityAndGetNumberOfFields(entity, schema);
+    }).toThrow('Expected number got string.');
+  });
+
+  test('invalid type, got boolean expected object', () => {
+    const schema = { rating: 'object?', name: 'string', male: 'boolean' };
+    const entity = { rating: true, name: 'John', male: true };
+
+    expect(() => {
+      validateEntityAndGetNumberOfFields(entity, schema);
+    }).toThrow('Expected object got boolean.');
+  });
+
+  test('invalid type, got array expected string', () => {
+    const schema = { rating: 'string?', name: 'string?', male: 'boolean' };
+    const entity = { rating: [{ text: 'hello' }], name: 'John', male: true };
+
+    expect(() => {
+      validateEntityAndGetNumberOfFields(entity, schema);
+    }).toThrow('Expected string got array.');
+  });
+
+  test('valid types, all existing', () => {
+    const schema = { rating: 'string?', name: 'string', male: 'boolean' };
+    const entity = { rating: 'text', name: 'John', male: true };
+
+    const fieldsCount = validateEntityAndGetNumberOfFields(entity, schema);
+    expect(fieldsCount).toBe(3);
+  });
+
+  test('valid types, one optional not existing', () => {
+    const schema = { rating: 'string?', name: 'string?', male: 'boolean' };
+    const entity = { rating: 'text', male: true };
+
+    const fieldsCount = validateEntityAndGetNumberOfFields(entity, schema);
+    expect(fieldsCount).toBe(2);
+  });
+
+  test('valid types, optional not existing', () => {
+    const schema = { rating: 'string?', name: 'string?', male: 'boolean' };
+    const entity = { male: true };
+
+    const fieldsCount = validateEntityAndGetNumberOfFields(entity, schema);
+    expect(fieldsCount).toBe(1);
   });
 });
 
@@ -449,6 +679,23 @@ describe('create entity in db', () => {
     await mongoose.connection.close();
   });
 });
+
+const initDbWithoutSchema = async () => {
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  const User = getUserModel();
+  await User.deleteMany({});
+  const user = new User({ username: 'ghost' });
+  await user.save();
+  await User.findOneAndUpdate(
+    { username: 'ghost' },
+    { $push: { environments: [{ dev: {} }, { prod: {} }] } },
+    { useFindAndModify: false },
+  ).exec();
+  await mongoose.connection.close();
+};
 
 describe('create entity without schema', () => {
   beforeEach(async () => initDbWithoutSchema());
@@ -598,7 +845,7 @@ describe('create entity with schema no nested', () => {
     };
 
     await expect(createEntity(event)).rejects.toThrow(
-      'Number of fields in entity is not correct.',
+      'Entity contains fields not existing in schema.',
     );
     await mongoose.connection.close();
   });
@@ -818,7 +1065,7 @@ describe('create entity with schema nested', () => {
     };
 
     await expect(createEntity(event)).rejects.toThrow(
-      'Number of fields in entity is not correct.',
+      'Entity contains fields not existing in schema.',
     );
     await mongoose.connection.close();
   });
