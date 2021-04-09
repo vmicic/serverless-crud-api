@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user.js');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
-const { getSelectorAndFilters, idsInvalid } = require('./extendEntities');
+const {
+  getSelectorAndFilters,
+  idsInvalid,
+} = require('./extendEntity/extendEntity');
 const { successResponse, errorResponse } = require('../util/responseUtil');
 require('dotenv').config();
 

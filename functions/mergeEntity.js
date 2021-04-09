@@ -3,7 +3,7 @@ const { getUserModel } = require('../models/user.js');
 const { getSegmentsWithoutUsernameAndEnv } = require('../util/urlUtils');
 const { idsInvalid } = require('./deleteEntities');
 const { successResponse, errorResponse } = require('../util/responseUtil');
-const { getSelectorAndFilters } = require('./extendEntities');
+const { getSelectorAndFilters } = require('./extendEntity/extendEntity');
 const { addIdForObjects } = require('./createEntity/createEntity');
 require('dotenv').config();
 

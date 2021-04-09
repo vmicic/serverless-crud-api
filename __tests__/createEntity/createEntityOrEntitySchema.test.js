@@ -455,7 +455,7 @@ describe('create entity with schema no nested', () => {
   beforeEach(async () => initDbWithSchema2());
 
   test('number of keys dont match', async () => {
-    const users = { users: [{ name: 'John' }] };
+    const users = { users: [{ name: 'John', age: 20, lastname: 'Robinson' }] };
     const event = {
       path: '/api/ghost/dev',
       pathParameters: { username: 'ghost', environment: 'dev' },
