@@ -856,3 +856,211 @@ describe('create entity with schema nested', () => {
     expect(response.body).toMatch('Username not found.');
   });
 });
+
+const initDbWithSchemaOptional = async () => {
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  const User = getUserModel();
+  await User.deleteMany({});
+  const user = new User({ username: 'ghost' });
+  await user.save();
+  await User.findOneAndUpdate(
+    { username: 'ghost' },
+    { $push: { environments: [{ dev: {} }, { prod: {} }] } },
+    { useFindAndModify: false },
+  ).exec();
+
+  await User.updateOne(
+    { username: 'ghost' },
+    {
+      $set: {
+        entitySchemas: {
+          dev: { users: { name: 'string', age: 'number?', male: 'boolean?' } },
+        },
+      },
+    },
+  ).exec();
+
+  await mongoose.connection.close();
+};
+
+describe('create entity with schema and optional fields', () => {
+  beforeEach(async () => initDbWithSchemaOptional());
+
+  test('number of keys dont match', async () => {
+    const users = { users: [{ name: 'John', age: 20, lastname: 'Robinson' }] };
+    const event = {
+      path: '/api/ghost/dev',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await createEntityOrEntitySchemaWrapper(event);
+    expect(response.statusCode).toBe(417);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+    expect(response.body).toMatch(
+      'Entity contains fields not existing in schema.',
+    );
+    await mongoose.connection.close();
+  });
+
+  test('field type mismatch', async () => {
+    const users = { users: [{ name: 'John', age: 'two' }] };
+    const event = {
+      path: '/api/ghost/dev',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await createEntityOrEntitySchemaWrapper(event);
+    expect(response.statusCode).toBe(417);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+    expect(response.body).toMatch('Expected number got string.');
+
+    await mongoose.connection.close();
+  });
+
+  test('no error, missing optional fields', async () => {
+    const users = { users: [{ name: 'John', age: 20 }, { name: 'Rob' }] };
+    const event = {
+      path: '/api/ghost/dev',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await createEntityOrEntitySchemaWrapper(event);
+    expect(response.statusCode).toBe(201);
+    await createEntityOrEntitySchemaWrapper(event);
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(2);
+    await mongoose.connection.close();
+  });
+});
+
+const initDbWithSchemaOptionalNested = async () => {
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  const User = getUserModel();
+  await User.deleteMany({});
+  const user = new User({ username: 'ghost' });
+  await user.save();
+  await User.findOneAndUpdate(
+    { username: 'ghost' },
+    { $push: { environments: [{ dev: {} }, { prod: {} }] } },
+    { useFindAndModify: false },
+  ).exec();
+
+  await User.updateOne(
+    { username: 'ghost' },
+    {
+      $set: {
+        entitySchemas: {
+          dev: {
+            users: {
+              name: 'string',
+              posts: { text: 'string?', rating: 'number?' },
+            },
+          },
+        },
+      },
+    },
+  ).exec();
+
+  await mongoose.connection.close();
+};
+
+describe('create entity with schema and optional fields and nested', () => {
+  beforeEach(async () => initDbWithSchemaOptionalNested());
+
+  test('number of keys dont match', async () => {
+    const users = {
+      users: [
+        { name: 'John', posts: [{ text: 'hello', rating: 5, comment: 'hey' }] },
+      ],
+    };
+    const event = {
+      path: '/api/ghost/dev',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await createEntityOrEntitySchemaWrapper(event);
+    expect(response.statusCode).toBe(417);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+    expect(response.body).toMatch(
+      'Entity contains fields not existing in schema.',
+    );
+  });
+
+  test('field type mismatch', async () => {
+    const users = {
+      users: [
+        {
+          name: 'John',
+          posts: [{ text: 'hello', rating: 'test' }],
+        },
+      ],
+    };
+    const event = {
+      path: '/api/ghost/dev',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await createEntityOrEntitySchemaWrapper(event);
+    expect(response.statusCode).toBe(417);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+    expect(response.body).toMatch('Expected number got string.');
+
+    await mongoose.connection.close();
+  });
+
+  test('no error, missing optional fields', async () => {
+    const users = {
+      users: [
+        { name: 'John', posts: [{ text: 'hello' }, { rating: 5 }] },
+        { name: 'Rob', posts: [{}, { text: 'alloha' }] },
+      ],
+    };
+    const event = {
+      path: '/api/ghost/dev',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await createEntityOrEntitySchemaWrapper(event);
+    expect(response.statusCode).toBe(201);
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(2);
+    expect(doc.environments[0].dev.users[0].posts.length).toBe(2);
+    expect(doc.environments[0].dev.users[0].posts[0].rating).toBeUndefined();
+    expect(doc.environments[0].dev.users[0].posts[0].text).toMatch('hello');
+    await mongoose.connection.close();
+  });
+});
