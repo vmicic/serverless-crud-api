@@ -63,7 +63,9 @@ In project root:
             "age": 38
         }
     ],
-    "force": true
+    "__meta": {
+        "force": true
+    }
 }'``
 
 - update entity:  
