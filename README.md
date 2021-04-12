@@ -14,6 +14,27 @@ In project root:
 - `npm install`
 - `sls offline`
 
+### schema requests:
+
+- create schema:
+`curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev' --header 'Content-Type: application/json' --data-raw '{
+  "users": {
+    "name": "string",
+    "age": "number"
+  },
+  "__meta": {
+      "type": true
+  }
+}'`
+
+- get schema:  
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users/__describe'`
+
+- get nested schema:  
+`curl --location --request GET 'http://localhost:3000/dev/api/ghost/dev/users/comments/__describe'`
+
+
+
 ### create/update requests:
 
 - create environment:  
@@ -29,6 +50,21 @@ In project root:
       "age": 38
   }]
 }'`
+
+- force create entity if schema doesn't match:  
+``curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev' --header 'Content-Type: application/json' --data-raw '{
+    "users": [
+        {
+            "name": "Jacob",
+            "age": 39
+        },
+        {
+            "name": "John",
+            "age": 38
+        }
+    ],
+    "force": true
+}'``
 
 - update entity:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users/6024e2ef7a2360aa6522e9ef' --header 'Content-Type: application/json' --data-raw '{ "name": "John" }'`
