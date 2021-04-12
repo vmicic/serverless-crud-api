@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const _ = require('lodash');
 const { getUserModel } = require('../../models/user.js');
 const { getSegmentsWithoutUsernameAndEnv } = require('../../util/urlUtils');
 const {
@@ -7,6 +8,9 @@ const {
   errorResponseFromError,
 } = require('../../util/responseUtil');
 const { validateInput } = require('./validateInput.js');
+const {
+  validateEntitiesWithSchema,
+} = require('../createEntity/schemaValidation');
 require('dotenv').config();
 
 /* eslint-disable no-param-reassign */
@@ -113,19 +117,84 @@ const idsInvalid = (pathSegments) => {
   return false;
 };
 
+const getEntitySchema = async (event) => {
+  const { username, environment } = event.pathParameters;
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+
+  let entitiesStructure = [];
+  pathSegments.forEach((segment, i) => {
+    if (i % 2 === 0) {
+      entitiesStructure = [...entitiesStructure, segment];
+    }
+  });
+
+  const query = {
+    username,
+  };
+
+  const entityPath = `entitySchemas.${environment}.${entitiesStructure.join(
+    '.',
+  )}`;
+  query[entityPath] = { $exists: true };
+
+  const User = getUserModel();
+  const document = await User.findOne(query);
+
+  if (document !== null) {
+    const schema = _.get(document, entityPath);
+    return { schemaExists: true, schema };
+  }
+
+  return { schemaExists: false };
+};
+
+const getResponse = (result) => {
+  if (result.n === 0) {
+    return errorResponse(
+      404,
+      {
+        'Content-type': 'text/plain',
+      },
+      'Username not found.',
+    );
+  }
+  if (result.nModified === 0) {
+    return errorResponse(
+      404,
+      {
+        'Content-type': 'text/plain',
+      },
+      'Environment not found.',
+    );
+  }
+
+  return successResponse(204, {
+    'Content-type': 'text/plain',
+  });
+};
+
 const extendEntity = async (event) => {
   validateInput(event);
 
+  const body = JSON.parse(event.body);
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
-  const body = JSON.parse(event.body);
-
-  addIds(body, pathSegments);
 
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
+
+  const { schemaExists, schema } = await getEntitySchema(event);
+  if (schemaExists) {
+    if (pathSegments.length % 2 === 0) {
+      validateEntitiesWithSchema([body], schema);
+    } else {
+      validateEntitiesWithSchema(body, schema);
+    }
+  }
+
+  addIds(body, pathSegments);
 
   const query = { username };
   if (pathSegments.length === 1) {
@@ -135,10 +204,10 @@ const extendEntity = async (event) => {
   const { update, options } = getQueryParams(environment, pathSegments, body);
 
   const User = getUserModel();
-  await User.updateOne(query, update, options);
+  const result = await User.updateOne(query, update, options);
   await mongoose.connection.close();
 
-  return successResponse(204, { 'Content-type': 'text/plain' });
+  return getResponse(result);
 };
 
 const extendEntityWrapper = async (event) => {

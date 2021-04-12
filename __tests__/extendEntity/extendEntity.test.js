@@ -8,6 +8,7 @@ const {
   addToExistingEntityQuery,
   extendEntityWrapper,
   addIds,
+  extendEntity,
 } = require('../../functions/extendEntity/extendEntity');
 const { getUserModel } = require('../../models/user');
 require('dotenv').config();
@@ -293,45 +294,6 @@ describe('add to existing enitity query', () => {
   });
 });
 
-const users = [
-  {
-    name: 'Tom',
-    age: 39,
-    _id: mongoose.Types.ObjectId('6017d641860f43b553b21602'),
-  },
-  {
-    name: 'Mark',
-    age: 39,
-    _id: mongoose.Types.ObjectId('600c099f8684263f7419818d'),
-  },
-  {
-    name: 'John',
-    age: 38,
-    _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
-    posts: [
-      {
-        text: 'hello my name is John',
-        _id: mongoose.Types.ObjectId('601a91476e16940587282479'),
-        comments: [
-          {
-            text: 'Nice to meet you',
-            _id: mongoose.Types.ObjectId('601a91476e1694058728247a'),
-            rating: 5,
-          },
-          {
-            _id: mongoose.Types.ObjectId('601a91476e1694058728247d'),
-            rating: 4,
-          },
-        ],
-      },
-      {
-        text: 'I like it',
-        _id: mongoose.Types.ObjectId('601a91476e1694058728247b'),
-      },
-    ],
-  },
-];
-
 const initializeDb = async () => {
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
@@ -347,6 +309,44 @@ const initializeDb = async () => {
     { useFindAndModify: false },
   ).exec();
 
+  const users = [
+    {
+      name: 'Tom',
+      age: 39,
+      _id: mongoose.Types.ObjectId('6017d641860f43b553b21602'),
+    },
+    {
+      name: 'Mark',
+      age: 39,
+      _id: mongoose.Types.ObjectId('600c099f8684263f7419818d'),
+    },
+    {
+      name: 'John',
+      age: 38,
+      _id: mongoose.Types.ObjectId('6017d641860f43b553b21603'),
+      posts: [
+        {
+          text: 'hello my name is John',
+          _id: mongoose.Types.ObjectId('601a91476e16940587282479'),
+          comments: [
+            {
+              text: 'Nice to meet you',
+              _id: mongoose.Types.ObjectId('601a91476e1694058728247a'),
+              rating: 5,
+            },
+            {
+              _id: mongoose.Types.ObjectId('601a91476e1694058728247d'),
+              rating: 4,
+            },
+          ],
+        },
+        {
+          text: 'I like it',
+          _id: mongoose.Types.ObjectId('601a91476e1694058728247b'),
+        },
+      ],
+    },
+  ];
   await User.updateOne(
     { username: 'ghost' },
     {
@@ -445,7 +445,7 @@ describe('extend entity wrapper', () => {
     };
 
     const response = await extendEntityWrapper(event);
-    expect(response.statusCode).toBe(204);
+    expect(response.statusCode).toBe(404);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -767,5 +767,400 @@ describe('extend entity wrapper', () => {
       'Johnathan',
     );
     await mongoose.connection.close();
+  });
+});
+
+const initDbWithSchema = async () => {
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  const User = getUserModel();
+  await User.deleteMany({});
+  const user = new User({ username: 'ghost' });
+  await user.save();
+  await User.findOneAndUpdate(
+    { username: 'ghost' },
+    {
+      $push: {
+        environments: [
+          { dev: { users: [{ name: 'John', age: 20 }] } },
+          { prod: {} },
+        ],
+      },
+    },
+    { useFindAndModify: false },
+  ).exec();
+
+  await User.updateOne(
+    { username: 'ghost' },
+    {
+      $set: {
+        entitySchemas: {
+          dev: { users: { name: 'string', age: 'number' } },
+        },
+      },
+    },
+  ).exec();
+
+  await mongoose.connection.close();
+};
+
+describe('extend entity with schema no nested', () => {
+  beforeEach(async () => initDbWithSchema());
+
+  test('number of keys dont match', async () => {
+    const users = [{ name: 'John', age: 20, lastname: 'Robinson' }];
+    const event = {
+      path: '/api/ghost/dev/users',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    await expect(extendEntity(event)).rejects.toThrow(
+      'Entity contains fields not existing in schema.',
+    );
+    await mongoose.connection.close();
+  });
+
+  test('field doesnt exist in schema', async () => {
+    const users = [
+      { name: 'John', age: 30 },
+      { name: 'Michale', lastname: 'Thompson' },
+    ];
+
+    const event = {
+      path: '/api/ghost/dev/users',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    await expect(extendEntity(event)).rejects.toThrow(
+      'Entity does not contain age field.',
+    );
+  });
+
+  test('field type mismatch', async () => {
+    const users = [{ name: 'John', age: 'two' }];
+    const event = {
+      path: '/api/ghost/dev/users',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    await expect(extendEntity(event)).rejects.toThrow(
+      'Expected number got string.',
+    );
+  });
+
+  test('no error', async () => {
+    const users = [{ name: 'John', age: 20 }];
+    const event = {
+      path: '/api/ghost/dev/users',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    await extendEntity(event);
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(2);
+    await mongoose.connection.close();
+  });
+
+  test('no error entity with properties with same name', async () => {
+    const users = [
+      { name: 'John', age: 20 },
+      // eslint-disable-next-line no-dupe-keys
+      { name: 'Michale', age: 20, name: 'Sebastian' },
+    ];
+    const event = {
+      path: '/api/ghost/dev/users',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    await extendEntity(event);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(3);
+    await mongoose.connection.close();
+  });
+
+  test('everything ok', async () => {
+    const body = [
+      { name: 'Rom', age: 39 },
+      { name: 'Mark', age: 39 },
+      { name: 'John', age: 38 },
+    ];
+
+    const event = {
+      path: '/api/ghost/dev/users',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(body),
+    };
+
+    const response = await extendEntity(event);
+    expect(response.statusCode).toBe(204);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(4);
+    await mongoose.connection.close();
+  });
+
+  test('extend entity for not existing env', async () => {
+    const users = [
+      { name: 'Rom', age: 39 },
+      { name: 'Mark', age: 39 },
+      { name: 'John', age: 38 },
+    ];
+    const event = {
+      path: '/api/ghost/notexisting/users',
+      pathParameters: { username: 'ghost', environment: 'notexisting' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await extendEntity(event);
+    expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+  });
+
+  test('extend entity for not existing username', async () => {
+    const users = {
+      users: [
+        { name: 'Rom', age: 39 },
+        { name: 'Mark', age: 39 },
+        { name: 'John', age: 38 },
+      ],
+    };
+    const event = {
+      path: '/api/notexisting/dev',
+      pathParameters: { username: 'notexisting', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await extendEntity(event);
+    expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+    expect(response.body).toMatch('Username not found.');
+  });
+});
+
+const initDbWithSchemaNested = async () => {
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  const User = getUserModel();
+  await User.deleteMany({});
+  const user = new User({ username: 'ghost' });
+  await user.save();
+  await User.findOneAndUpdate(
+    { username: 'ghost' },
+    {
+      $push: {
+        environments: [
+          {
+            dev: {
+              users: [
+                {
+                  _id: mongoose.Types.ObjectId('607406b523637659bd4e2d1f'),
+                  name: 'John',
+                  age: 20,
+                  comments: [{ text: 'hello' }],
+                },
+              ],
+            },
+          },
+          { prod: {} },
+        ],
+      },
+    },
+    { useFindAndModify: false },
+  ).exec();
+
+  await User.updateOne(
+    { username: 'ghost' },
+    {
+      $set: {
+        entitySchemas: {
+          dev: {
+            users: {
+              name: 'string',
+              age: 'number',
+              comments: { text: 'string' },
+            },
+          },
+        },
+      },
+    },
+  ).exec();
+
+  await mongoose.connection.close();
+};
+
+describe.only('extend entity with schema nested', () => {
+  beforeEach(async () => initDbWithSchemaNested());
+
+  test('number of keys dont match', async () => {
+    const user = {
+      name: 'John',
+      age: 20,
+      comments: [{ text: 'hello', rating: 5 }],
+    };
+    const event = {
+      path: '/api/ghost/dev/users/607406b523637659bd4e2d1f',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(user),
+    };
+
+    await expect(extendEntity(event)).rejects.toThrow(
+      'Entity contains fields not existing in schema.',
+    );
+    await mongoose.connection.close();
+  });
+
+  test('field type mismatch', async () => {
+    const users = { name: 'John', age: 2, comments: [{ text: 5 }] };
+    const event = {
+      path: '/api/ghost/dev/users/607406b523637659bd4e2d1f',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    await expect(extendEntity(event)).rejects.toThrow(
+      'Expected string got number.',
+    );
+    await mongoose.connection.close();
+  });
+
+  test('no error entity with properties with same name', async () => {
+    const users = {
+      name: 'Michale',
+      age: 20,
+      // eslint-disable-next-line no-dupe-keys
+      comments: [{ text: 'hello', text: 'alloha' }],
+    };
+
+    const event = {
+      path: '/api/ghost/dev/users/607406b523637659bd4e2d1f',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await extendEntity(event);
+    expect(response.statusCode).toBe(204);
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(1);
+    expect(doc.environments[0].dev.users[0].comments.length).toBe(1);
+    expect(doc.environments[0].dev.users[0].comments[0].text).toMatch('alloha');
+    await mongoose.connection.close();
+  });
+
+  test('everything ok', async () => {
+    const body = {
+      name: 'Rom',
+      age: 39,
+      comments: [{ text: 'hello' }, { text: 'friend' }],
+    };
+
+    const event = {
+      path: '/api/ghost/dev/users/607406b523637659bd4e2d1f',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(body),
+    };
+
+    const response = await extendEntity(event);
+    expect(response.statusCode).toBe(204);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(1);
+    expect(doc.environments[0].dev.users[0].comments.length).toBe(2);
+    expect(doc.environments[0].dev.users[0].comments[1].text).toMatch('friend');
+    await mongoose.connection.close();
+  });
+
+  test('create entity for not existing env', async () => {
+    const users = {
+      name: 'Rom',
+      age: 39,
+      comments: [{ text: 'hello' }, { text: 'friend' }],
+    };
+    const event = {
+      path: '/api/ghost/notexisting/users/607406b523637659bd4e2d1f',
+      pathParameters: { username: 'ghost', environment: 'notexisting' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await extendEntity(event);
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toMatch('Environment not found.');
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+  });
+
+  test('create entity for not existing username', async () => {
+    const users = {
+      name: 'Rom',
+      age: 39,
+      comments: [{ text: 'hello' }, { text: 'friend' }],
+    };
+    const event = {
+      path: '/api/notexisting/dev/users/607406b523637659bd4e2d1f',
+      pathParameters: { username: 'notexisting', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await extendEntity(event);
+    expect(response.statusCode).toBe(404);
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+    expect(response.body).toMatch('Username not found.');
   });
 });

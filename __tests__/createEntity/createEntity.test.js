@@ -827,6 +827,7 @@ describe('create entity with schema nested', () => {
 
     const response = await createEntity(event);
     expect(response.statusCode).toBe(404);
+    expect(response.body).toMatch('Environment not found.');
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
