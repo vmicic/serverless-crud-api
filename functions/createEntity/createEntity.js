@@ -1,3 +1,4 @@
+/* eslint-disable operator-linebreak */
 const mongoose = require('mongoose');
 const _ = require('lodash');
 const { getUserModel } = require('../../models/user.js');
@@ -106,7 +107,11 @@ const createEntity = async (event) => {
   });
 
   // if we are forcing creation of entity without schema check
-  if ('__meta' in body && 'force' in body.__meta && body.__meta.force) {
+  if (
+    '__meta' in body &&
+    'force' in body.__meta &&
+    body.__meta.force === true
+  ) {
     const result = await createEntityInDb(body, event);
     await mongoose.connection.close();
     return getResponse(result);

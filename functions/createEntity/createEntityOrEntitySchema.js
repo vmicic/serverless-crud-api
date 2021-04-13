@@ -14,7 +14,7 @@ const createEntityOrEntitySchema = async (event) => {
 
   if ('__meta' in body) {
     // eslint-disable-next-line no-underscore-dangle
-    if ('type' in body.__meta && body.__meta.type) {
+    if ('type' in body.__meta && body.__meta.type === true) {
       return createEntitySchema(event);
     }
   }

@@ -32,8 +32,8 @@ const validateBodyWithSchema = (body) => {
 
   if (
     // eslint-disable-next-line operator-linebreak
-    !('type' in body.__meta && body.__meta.type) &&
-    !('force' in body.__meta && body.__meta.force)
+    !('type' in body.__meta && body.__meta.type === true) &&
+    !('force' in body.__meta && body.__meta.force === true)
   ) {
     throw new BadRequestError(400, 'Property __meta is invalid.');
   }

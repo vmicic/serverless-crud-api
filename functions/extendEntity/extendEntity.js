@@ -1,3 +1,4 @@
+/* eslint-disable operator-linebreak */
 const mongoose = require('mongoose');
 const _ = require('lodash');
 const { getUserModel } = require('../../models/user.js');
@@ -202,7 +203,11 @@ const extendEntity = async (event) => {
   const body = JSON.parse(event.body);
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
 
-  if ('headers' in event && 'force' in event.headers && event.headers.force) {
+  if (
+    'headers' in event &&
+    'force' in event.headers &&
+    event.headers.force === true
+  ) {
     const result = await extendEntityInDb(body, event);
     await mongoose.connection.close();
     return getResponse(result);

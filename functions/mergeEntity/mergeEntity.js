@@ -1,3 +1,4 @@
+/* eslint-disable operator-linebreak */
 /* eslint-disable no-underscore-dangle */
 const mongoose = require('mongoose');
 const _ = require('lodash');
@@ -80,7 +81,11 @@ const mergeEntity = async (event) => {
     useUnifiedTopology: true,
   });
 
-  if ('headers' in event && 'force' in event.headers && event.headers.force) {
+  if (
+    'headers' in event &&
+    'force' in event.headers &&
+    event.headers.force === true
+  ) {
     await mergeEntityInDb(event);
     await mongoose.connection.close();
     return successResponse(204, {
