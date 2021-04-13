@@ -1,5 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 const mongoose = require('mongoose');
+const _ = require('lodash');
 const { getUserModel } = require('../../models/user.js');
 const { getSegmentsWithoutUsernameAndEnv } = require('../../util/urlUtils');
 const { validateInput } = require('./validateInput');
@@ -56,9 +57,7 @@ const mergeEntityInDb = async (event) => {
   const query = { username };
   const { update, options } = getQueryParams(environment, pathSegments, entity);
 
-  console.log('performing db operation');
   const User = getUserModel();
-  console.log('got user model');
   return User.updateOne(query, update, options);
 };
 
@@ -90,11 +89,15 @@ const mergeEntity = async (event) => {
   }
 
   const entity = JSON.parse(event.body);
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
 
   const { schemaExists, schema } = await getEntitySchema(event);
   if (schemaExists) {
     const response = await getEntity(event);
-    const oldEntity = JSON.parse(response.body).users[0];
+    const oldEntity = _.get(
+      JSON.parse(response.body),
+      `${pathSegments[pathSegments.length - 2]}[0]`,
+    );
     delete oldEntity._id;
     delete oldEntity.__embedded;
     const mergedEntity = mergeObjects(oldEntity, entity);
