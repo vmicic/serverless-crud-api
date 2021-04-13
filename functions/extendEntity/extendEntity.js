@@ -155,9 +155,10 @@ const getResponse = (result) => {
       {
         'Content-type': 'text/plain',
       },
-      'Username not found.',
+      'Username or environment not found.',
     );
   }
+
   if (result.nModified === 0) {
     return errorResponse(
       404,

@@ -26,7 +26,6 @@ const createEntityOrEntitySchemaWrapper = async (event) => {
   try {
     return await createEntityOrEntitySchema(event);
   } catch (error) {
-    console.log(error);
     await mongoose.connection.close();
     if (error.statusCode !== undefined) {
       return errorResponseFromError(error);
