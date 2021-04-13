@@ -2,10 +2,10 @@
 const mongoose = require('mongoose');
 const { getUserModel } = require('../models/user');
 const {
-  mergeEntity,
+  mergeEntityWrapper,
   addId,
   getQueryParams,
-} = require('../functions/mergeEntity');
+} = require('../functions/mergeEntity/mergeEntity');
 require('dotenv').config();
 
 test('add id entity', () => {
@@ -148,7 +148,7 @@ describe('merge entity tests', () => {
       body: JSON.stringify(user),
     };
 
-    const response = await mergeEntity(event);
+    const response = await mergeEntityWrapper(event);
     expect(response).not.toBeNull();
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
@@ -165,7 +165,7 @@ describe('merge entity tests', () => {
       body: JSON.stringify(user),
     };
 
-    const response = await mergeEntity(event);
+    const response = await mergeEntityWrapper(event);
     expect(response).not.toBeNull();
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
@@ -178,7 +178,7 @@ describe('merge entity tests', () => {
       body: '"age":20}',
     };
 
-    const response = await mergeEntity(event);
+    const response = await mergeEntityWrapper(event);
     expect(response.stat);
     expect(response.statusCode).toBe(400);
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
@@ -195,7 +195,7 @@ describe('merge entity tests', () => {
       body: JSON.stringify(user),
     };
 
-    const response = await mergeEntity(event);
+    const response = await mergeEntityWrapper(event);
     expect(response).not.toBeNull();
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
@@ -227,7 +227,7 @@ describe('merge entity tests', () => {
       body: JSON.stringify(update),
     };
 
-    const response = await mergeEntity(event);
+    const response = await mergeEntityWrapper(event);
     expect(response).not.toBeNull();
     expect(response.statusCode).toBe(204);
     await mongoose.connect(process.env.MONGODB_URI, {
@@ -260,8 +260,8 @@ describe('merge entity tests', () => {
       body: JSON.stringify(update),
     };
 
-    const response = await mergeEntity(event);
+    const response = await mergeEntityWrapper(event);
     expect(response).not.toBeNull();
-    expect(response.statusCode).toBe(400);
+    expect(response.statusCode).toBe(500);
   });
 });

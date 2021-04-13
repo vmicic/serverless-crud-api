@@ -111,7 +111,7 @@ functions:
           path: /api/{username}/{environment}/{any+}
           method: PUT
   mergeEntity:
-    handler: functions/mergeEntity.mergeEntity
+    handler: functions/mergeEntity/mergeEntity.mergeEntityWrapper
     events:
       - httpApi:
           path: /api/{username}/{environment}/{any+}

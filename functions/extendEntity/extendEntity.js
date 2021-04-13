@@ -248,4 +248,5 @@ module.exports = {
   addToExistingEntityQuery,
   idsInvalid,
   extendEntityWrapper,
+  getEntitySchema,
 };
