@@ -63,7 +63,7 @@ describe('validate body with schema', () => {
 
   test('type in meta, no error', () => {
     const body = {
-      users: [{ name: 'john' }, { name: 'michael' }],
+      users: { name: 'string' },
       __meta: { type: true },
     };
 
@@ -170,7 +170,7 @@ describe('validate properties', () => {
 
   test('type in meta, no error', () => {
     const body = {
-      users: [{ name: 'john' }, { name: 'michael' }],
+      users: { name: 'string' },
       __meta: { type: true },
     };
 
@@ -266,7 +266,7 @@ describe('validate input', () => {
   test('type in meta, no error', () => {
     const event = {
       body: JSON.stringify({
-        users: [{ name: 'john' }, { name: 'michael' }],
+        users: { name: 'string' },
         __meta: { type: true },
       }),
     };

@@ -13,11 +13,10 @@ const parseJson = (body) => {
 
 const validateBodyWithoutSchema = (body) => {
   if (!Array.isArray(Object.values(body)[0])) {
-    const error = new Error(
+    throw new BadRequestError(
+      400,
       'Please provide entity with this structure { NAME: [{}, {}, {}] }',
     );
-    error.statusCode = 400;
-    throw error;
   }
 };
 
@@ -36,6 +35,28 @@ const validateBodyWithSchema = (body) => {
     !('force' in body.__meta && body.__meta.force === true)
   ) {
     throw new BadRequestError(400, 'Property __meta is invalid.');
+  }
+
+  if ('force' in body.__meta && body.__meta.force === true) {
+    const entityName = Object.keys(body).find((key) => key !== '__meta');
+    if (!Array.isArray(body[entityName])) {
+      throw new BadRequestError(
+        400,
+        'Please provide entity with this structure { NAME: [{}, {}, {}] }',
+      );
+    }
+  }
+
+  if ('type' in body.__meta && body.__meta.type === true) {
+    const entityName = Object.keys(body).find((key) => key !== '__meta');
+
+    if (Array.isArray(body[entityName])) {
+      throw new BadRequestError(400, 'Please provide object as schema.');
+    }
+
+    if (!(typeof body[entityName] === 'object' && body[entityName] !== null)) {
+      throw new BadRequestError(400, 'Please provide object as schema.');
+    }
   }
 };
 
