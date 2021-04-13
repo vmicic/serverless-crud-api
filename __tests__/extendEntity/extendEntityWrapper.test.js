@@ -496,7 +496,17 @@ const initDbWithSchema = async () => {
     {
       $push: {
         environments: [
-          { dev: { users: [{ name: 'John', age: 20 }] } },
+          {
+            dev: {
+              users: [
+                {
+                  _id: mongoose.Types.ObjectId('6017d641860f43b553b21602'),
+                  name: 'John',
+                  age: 20,
+                },
+              ],
+            },
+          },
           { prod: {} },
         ],
       },
@@ -570,6 +580,20 @@ describe('extend entity wrapper with schema no nested', () => {
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
   });
 
+  test('field type mismatch single entity', async () => {
+    const user = { name: 'John', age: 'two' };
+    const event = {
+      path: '/api/ghost/dev/users/6017d641860f43b553b21602',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(user),
+    };
+
+    const response = await extendEntityWrapper(event);
+    expect(response.statusCode).toBe(417);
+    expect(response.body).toMatch('Expected number got string.');
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+  });
+
   test('no error', async () => {
     const users = [{ name: 'John', age: 20 }];
     const event = {
@@ -593,6 +617,34 @@ describe('extend entity wrapper with schema no nested', () => {
     });
     expect(doc).not.toBeNull();
     expect(doc.environments[0].dev.users.length).toBe(2);
+    await mongoose.connection.close();
+  });
+
+  test('no error single entity', async () => {
+    const user = { name: 'John', age: 20 };
+    const event = {
+      path: '/api/ghost/dev/users/6017d641860f43b553b21602',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(user),
+    };
+
+    const response = await extendEntityWrapper(event);
+    expect(response.statusCode).toBe(204);
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(1);
+    expect(doc.environments[0].dev.users[0].name).toMatch('John');
+    expect(doc.environments[0].dev.users[0].age).toBe(20);
     await mongoose.connection.close();
   });
 
@@ -717,7 +769,12 @@ const initDbWithSchemaNested = async () => {
                   _id: mongoose.Types.ObjectId('607406b523637659bd4e2d1f'),
                   name: 'John',
                   age: 20,
-                  comments: [{ text: 'hello' }],
+                  comments: [
+                    {
+                      _id: mongoose.Types.ObjectId('6017d641860f43b553b21602'),
+                      text: 'hello',
+                    },
+                  ],
                 },
               ],
             },
@@ -784,6 +841,52 @@ describe('extend entity with schema nested', () => {
     expect(response.statusCode).toBe(417);
     expect(response.body).toMatch('Expected string got number.');
     expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+  });
+
+  test('field type mismatch single entity', async () => {
+    const users = { text: 5 };
+    const event = {
+      path:
+        '/api/ghost/dev/users/607406b523637659bd4e2d1f/comments/6017d641860f43b553b21602',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await extendEntityWrapper(event);
+    expect(response.statusCode).toBe(417);
+    expect(response.body).toMatch('Expected string got number.');
+    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+  });
+
+  test('no error single entity', async () => {
+    const users = { text: 'new text' };
+    const event = {
+      path:
+        '/api/ghost/dev/users/607406b523637659bd4e2d1f/comments/6017d641860f43b553b21602',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(users),
+    };
+
+    const response = await extendEntityWrapper(event);
+    expect(response.statusCode).toBe(204);
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    const User = getUserModel();
+    const doc = await User.findOne({
+      username: 'ghost',
+      'environments.dev.users': { $exists: true },
+    });
+    expect(doc).not.toBeNull();
+    expect(doc.environments[0].dev.users.length).toBe(1);
+    expect(doc.environments[0].dev.users[0].comments.length).toBe(1);
+    expect(doc.environments[0].dev.users[0].comments[0].text).toMatch(
+      'new text',
+    );
+    await mongoose.connection.close();
   });
 
   test('no error entity with properties with same name', async () => {

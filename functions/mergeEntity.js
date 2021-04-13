@@ -79,6 +79,9 @@ const mergeEntity = async (event) => {
 
   const User = getUserModel();
   try {
+    console.log(query);
+    console.log(update);
+    console.log(options);
     await User.updateOne(query, update, options);
   } catch (error) {
     await mongoose.connection.close();
