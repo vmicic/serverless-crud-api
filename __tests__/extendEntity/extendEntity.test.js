@@ -1027,7 +1027,7 @@ const initDbWithSchemaNested = async () => {
   await mongoose.connection.close();
 };
 
-describe.only('extend entity with schema nested', () => {
+describe('extend entity with schema nested', () => {
   beforeEach(async () => initDbWithSchemaNested());
 
   test('number of keys dont match', async () => {

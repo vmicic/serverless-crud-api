@@ -173,26 +173,9 @@ const getResponse = (result) => {
   });
 };
 
-const extendEntity = async (event) => {
-  validateInput(event);
-
-  const body = JSON.parse(event.body);
+const extendEntityInDb = async (body, event) => {
   const { username, environment } = event.pathParameters;
   const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
-
-  await mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  const { schemaExists, schema } = await getEntitySchema(event);
-  if (schemaExists) {
-    if (pathSegments.length % 2 === 0) {
-      validateEntitiesWithSchema([body], schema);
-    } else {
-      validateEntitiesWithSchema(body, schema);
-    }
-  }
 
   addIds(body, pathSegments);
 
@@ -204,9 +187,37 @@ const extendEntity = async (event) => {
   const { update, options } = getQueryParams(environment, pathSegments, body);
 
   const User = getUserModel();
-  const result = await User.updateOne(query, update, options);
-  await mongoose.connection.close();
+  return User.updateOne(query, update, options);
+};
 
+const extendEntity = async (event) => {
+  validateInput(event);
+
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  const body = JSON.parse(event.body);
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+
+  if ('headers' in event && 'force' in event.headers && event.headers.force) {
+    const result = await extendEntityInDb(body, event);
+    await mongoose.connection.close();
+    return getResponse(result);
+  }
+
+  const { schemaExists, schema } = await getEntitySchema(event);
+  if (schemaExists) {
+    if (pathSegments.length % 2 === 0) {
+      validateEntitiesWithSchema([body], schema);
+    } else {
+      validateEntitiesWithSchema(body, schema);
+    }
+  }
+
+  const result = await extendEntityInDb(body, event);
+  await mongoose.connection.close();
   return getResponse(result);
 };
 
