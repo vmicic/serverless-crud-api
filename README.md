@@ -16,7 +16,7 @@ In project root:
 
 ### schema requests:
 
-- create schema:
+- create schema:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev' --header 'Content-Type: application/json' --data-raw '{
   "users": {
     "name": "string",
