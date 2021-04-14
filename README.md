@@ -71,9 +71,20 @@ In project root:
 - update entity:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users/6024e2ef7a2360aa6522e9ef' --header 'Content-Type: application/json' --data-raw '{ "name": "John" }'`
 
+- force update entity if it doesn't match schema:  
+`curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users' --header 'force: true' --header 'Content-Type: application/json' --data-raw '[
+    {
+        "name": 2
+    }
+]'`
 
 - update entity with merge:  
 `curl --location --request PATCH 'http://localhost:3000/dev/api/ghost/dev/users/6024e2ef7a2360aa6522e9ef' --header 'Content-Type: application/json' --data-raw '{"lastname": "Grant"}'`
+
+- force update entity with merge if it doesn't match schema:  
+`curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users/6076999f48dfe198909fd94e' --header 'force: true' --header 'Content-Type: application/json' --data-raw '{
+    "age": "twenty"
+}'`
 
 - add entity members:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users' --header 'Content-Type: application/json' --data-raw '[
@@ -86,6 +97,12 @@ In project root:
         "lastname": "Porter"
     }
 ]'`
+
+- force add entity members if they don't match schema:
+`curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users' --header 'force: true' --header 'Content-Type: application/json' --data-raw '[{
+    "name": "John",
+    "job": "actor"
+}]'`
 
 
 ### get requests:
