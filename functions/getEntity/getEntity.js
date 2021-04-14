@@ -261,8 +261,37 @@ const getEntity = async (event) => {
   return getResponse(document, pathSegments);
 };
 
+const getEntityInternal = async (event) => {
+  validateInput(event);
+
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+  const { username, environment } = event.pathParameters;
+  const { queryStringParameters } = event;
+
+  await mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  const agreagateQuery = [
+    { $match: { username } },
+    { $unwind: '$environments' },
+  ].concat(getDbQuery([...pathSegments], environment, queryStringParameters));
+
+  const User = getUserModel();
+  const document = await User.aggregate(agreagateQuery).exec();
+  await mongoose.connection.close();
+
+  return successResponse(
+    200,
+    { 'Content-type': 'application/json' },
+    JSON.stringify(document),
+  );
+};
+
 module.exports = {
   getEntity,
+  getEntityInternal,
   getEntityDbQuery,
   getEntityByQueryParamsDbQuery,
   getEntityByIdDbQuery,

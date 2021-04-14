@@ -160,16 +160,6 @@ const getResponse = (result) => {
     );
   }
 
-  if (result.nModified === 0) {
-    return errorResponse(
-      404,
-      {
-        'Content-type': 'text/plain',
-      },
-      'Environment not found.',
-    );
-  }
-
   return successResponse(204, {
     'Content-type': 'text/plain',
   });
@@ -206,7 +196,7 @@ const extendEntity = async (event) => {
   if (
     'headers' in event &&
     'force' in event.headers &&
-    event.headers.force === true
+    event.headers.force === 'true'
   ) {
     const result = await extendEntityInDb(body, event);
     await mongoose.connection.close();

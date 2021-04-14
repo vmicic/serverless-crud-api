@@ -53,7 +53,7 @@ const getResponse = (result) => {
       {
         'Content-type': 'text/plain',
       },
-      'Unable to create requested entity or it already exists.',
+      'Unable to create requested entity schema or it already exists.',
     );
   }
 

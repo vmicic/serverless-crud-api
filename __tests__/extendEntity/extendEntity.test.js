@@ -665,9 +665,7 @@ describe('extend entity with schema nested', () => {
     };
 
     const response = await extendEntity(event);
-    expect(response.statusCode).toBe(404);
-    expect(response.body).toMatch('Environment not found.');
-    expect(response.headers).toEqual({ 'Content-type': 'text/plain' });
+    expect(response.statusCode).toBe(204);
   });
 
   test('extend entity for not existing username', async () => {
@@ -712,7 +710,7 @@ describe('extend entity with schema nested', () => {
       path: '/api/ghost/dev/users',
       pathParameters: { username: 'ghost', environment: 'dev' },
       body: JSON.stringify(body),
-      headers: { force: true },
+      headers: { force: 'true' },
     };
 
     const response = await extendEntity(event);

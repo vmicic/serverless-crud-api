@@ -16,7 +16,7 @@ const {
   validateEntitiesWithSchema,
 } = require('../createEntity/schemaValidation');
 const { getEntitySchema } = require('../extendEntity/extendEntity');
-const { getEntity } = require('../getEntity/getEntity');
+const { getEntityInternal } = require('../getEntity/getEntity');
 require('dotenv').config();
 
 const getQueryParams = (env, pathSegments, entity) => {
@@ -73,6 +73,33 @@ const mergeObjects = (oldEntity, newEntity) => {
   return mergedEntity;
 };
 
+/* eslint-disable no-param-reassign */
+/* eslint-disable no-underscore-dangle */
+const removeIdsForObjects = (array) => {
+  if (Array.isArray(array)) {
+    array.forEach((element) => {
+      if (typeof element === 'object' && element !== null) {
+        delete element._id;
+        Object.keys(element).forEach((field) => {
+          if (Array.isArray(element[field])) {
+            removeIdsForObjects(element[field]);
+          }
+        });
+      }
+    });
+  }
+};
+
+const removeNestedIds = (entity) => {
+  if (typeof entity === 'object' && entity !== null) {
+    Object.keys(entity).forEach((field) => {
+      if (Array.isArray(entity[field])) {
+        removeIdsForObjects(entity[field]);
+      }
+    });
+  }
+};
+
 const mergeEntity = async (event) => {
   validateInput(event);
 
@@ -84,7 +111,7 @@ const mergeEntity = async (event) => {
   if (
     'headers' in event &&
     'force' in event.headers &&
-    event.headers.force === true
+    event.headers.force === 'true'
   ) {
     await mergeEntityInDb(event);
     await mongoose.connection.close();
@@ -98,13 +125,13 @@ const mergeEntity = async (event) => {
 
   const { schemaExists, schema } = await getEntitySchema(event);
   if (schemaExists) {
-    const response = await getEntity(event);
+    const response = await getEntityInternal(event);
     const oldEntity = _.get(
-      JSON.parse(response.body),
+      JSON.parse(response.body)[0],
       `${pathSegments[pathSegments.length - 2]}[0]`,
     );
+    removeNestedIds(oldEntity);
     delete oldEntity._id;
-    delete oldEntity.__embedded;
     const mergedEntity = mergeObjects(oldEntity, entity);
     validateEntitiesWithSchema([mergedEntity], schema);
 

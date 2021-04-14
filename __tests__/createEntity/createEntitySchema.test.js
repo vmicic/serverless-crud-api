@@ -28,7 +28,7 @@ describe('get response', () => {
 
     expect(response.statusCode).toBe(404);
     expect(response.body).toMatch(
-      'Unable to create requested entity or it already exists.',
+      'Unable to create requested entity schema or it already exists.',
     );
   });
 
