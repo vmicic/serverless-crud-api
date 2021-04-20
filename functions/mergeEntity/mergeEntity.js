@@ -133,11 +133,6 @@ const mergeEntity = async (event) => {
     delete oldEntity._id;
     const mergedEntity = mergeObjects(oldEntity, entity);
     validateEntitiesWithSchema([mergedEntity], schema);
-
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
   }
 
   await mergeEntityInDb(event);
