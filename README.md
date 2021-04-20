@@ -16,7 +16,7 @@ In project root:
 
 ### schema requests:
 
-- create schema:
+- create schema:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev' --header 'Content-Type: application/json' --data-raw '{
   "users": {
     "name": "string",
@@ -98,7 +98,7 @@ In project root:
     }
 ]'`
 
-- force add entity members if they don't match schema:
+- force add entity members if they don't match schema:  
 `curl --location --request PUT 'http://localhost:3000/dev/api/ghost/dev/users' --header 'force: true' --header 'Content-Type: application/json' --data-raw '[{
     "name": "John",
     "job": "actor"
