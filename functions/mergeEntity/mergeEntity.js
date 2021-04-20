@@ -12,11 +12,10 @@ const {
 } = require('../../util/responseUtil');
 const { getSelectorAndFilters } = require('../extendEntity/extendEntity');
 const { addIdForObjects } = require('../createEntity/createEntity');
-const {
-  validateEntitiesWithSchema,
-} = require('../createEntity/schemaValidation');
+const { validateEntitiesWithSchema } = require('../createEntity/schemaValidation');
 const { getEntitySchema } = require('../extendEntity/extendEntity');
 const { getEntityInternal } = require('../getEntity/getEntity');
+const { BadRequestError } = require('../../errors/BadRequestError.js');
 require('dotenv').config();
 
 const getQueryParams = (env, pathSegments, entity) => {
@@ -103,16 +102,24 @@ const removeNestedIds = (entity) => {
 const mergeEntity = async (event) => {
   validateInput(event);
 
+  const entity = JSON.parse(event.body);
+  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
+
+  const response = await getEntityInternal(event);
+  const oldEntity = _.get(
+    JSON.parse(response.body)[0],
+    `${pathSegments[pathSegments.length - 2]}[0]`,
+  );
+  if (oldEntity === undefined) {
+    throw new BadRequestError(404, 'Entity not found.');
+  }
+
   await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
-  if (
-    'headers' in event &&
-    'force' in event.headers &&
-    event.headers.force === 'true'
-  ) {
+  if ('headers' in event && 'force' in event.headers && event.headers.force === 'true') {
     await mergeEntityInDb(event);
     await mongoose.connection.close();
     return successResponse(204, {
@@ -120,16 +127,8 @@ const mergeEntity = async (event) => {
     });
   }
 
-  const entity = JSON.parse(event.body);
-  const pathSegments = getSegmentsWithoutUsernameAndEnv(event.path);
-
   const { schemaExists, schema } = await getEntitySchema(event);
   if (schemaExists) {
-    const response = await getEntityInternal(event);
-    const oldEntity = _.get(
-      JSON.parse(response.body)[0],
-      `${pathSegments[pathSegments.length - 2]}[0]`,
-    );
     removeNestedIds(oldEntity);
     delete oldEntity._id;
     const mergedEntity = mergeObjects(oldEntity, entity);

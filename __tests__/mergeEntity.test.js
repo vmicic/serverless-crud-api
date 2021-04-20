@@ -42,19 +42,13 @@ test('get query params for update', () => {
 
 test('get query params for update with nested entities', () => {
   const env = 'dev';
-  const pathSegments = [
-    'users',
-    '601d0913ebddc2403083eae9',
-    'posts',
-    '601d0c80b18e7540dac4da59',
-  ];
+  const pathSegments = ['users', '601d0913ebddc2403083eae9', 'posts', '601d0c80b18e7540dac4da59'];
   const entity = { text: 'Johnny', rating: '20' };
 
   const { update, options } = getQueryParams(env, pathSegments, entity);
   expect(update).toEqual({
     $set: {
-      'environments.$[envId].dev.users.$[usersId].posts.$[postsId].text':
-        'Johnny',
+      'environments.$[envId].dev.users.$[usersId].posts.$[postsId].text': 'Johnny',
       'environments.$[envId].dev.users.$[usersId].posts.$[postsId].rating': 20,
     },
   });
@@ -221,8 +215,7 @@ describe('merge entity tests', () => {
     };
 
     const event = {
-      path:
-        '/api/ghost/dev/users/6017d641860f43b553b21603/posts/601a91476e16940587282479',
+      path: '/api/ghost/dev/users/6017d641860f43b553b21603/posts/601a91476e16940587282479',
       pathParameters: { username: 'ghost', environment: 'dev' },
       body: JSON.stringify(update),
     };
@@ -241,9 +234,7 @@ describe('merge entity tests', () => {
       'environments.dev.users': { $exists: true },
     });
     expect(doc).not.toBeNull();
-    expect(doc.environments[0].dev.users[2].posts[0].text).toMatch(
-      'hello I changed my name',
-    );
+    expect(doc.environments[0].dev.users[2].posts[0].text).toMatch('hello I changed my name');
     expect(doc.environments[0].dev.users[2].posts[0].rating).toBe(5);
     await mongoose.connection.close();
   });
@@ -254,15 +245,15 @@ describe('merge entity tests', () => {
     };
 
     const event = {
-      path:
-        '/api/ghost/dev/notexisting/601a91476e16940587282479/posts/601a91476e16940587282479',
+      path: '/api/ghost/dev/notexisting/601a91476e16940587282479/posts/601a91476e16940587282479',
       pathParameters: { username: 'ghost', environment: 'dev' },
       body: JSON.stringify(update),
     };
 
     const response = await mergeEntityWrapper(event);
     expect(response).not.toBeNull();
-    expect(response.statusCode).toBe(500);
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toMatch('Entity not found.');
   });
 });
 
@@ -395,10 +386,8 @@ describe('merge entity with schema no nested', () => {
     };
 
     const response = await mergeEntityWrapper(event);
-    expect(response.statusCode).toBe(500);
-    expect(response.body).toMatch(
-      'Unexpected error happened. Please try again',
-    );
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toMatch('Entity not found.');
     expect(response.headers).toStrictEqual({ 'Content-type': 'text/plain' });
   });
 
@@ -413,9 +402,7 @@ describe('merge entity with schema no nested', () => {
 
     const response = await mergeEntityWrapper(event);
     expect(response.statusCode).toBe(417);
-    expect(response.body).toMatch(
-      'Entity contains fields not existing in schema.',
-    );
+    expect(response.body).toMatch('Entity contains fields not existing in schema.');
     expect(response.headers).toStrictEqual({ 'Content-type': 'text/plain' });
   });
   test('add new field, no errors', async () => {
@@ -563,6 +550,20 @@ describe('merge entity with nested entities', () => {
     expect(doc.environments[0].dev.users[0].comments[0].rating).toBe(2);
     await mongoose.connection.close();
   });
+
+  test('not existing id', async () => {
+    const user = { comments: [{ text: 'hello', rating: 2 }] };
+
+    const event = {
+      path: '/api/ghost/dev/users/6017d641860f43b553b21601',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(user),
+    };
+
+    const response = await mergeEntityWrapper(event);
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toMatch('Entity not found.');
+  });
 });
 
 describe('merge nested entities', () => {
@@ -572,8 +573,7 @@ describe('merge nested entities', () => {
     const user = { text: 2 };
 
     const event = {
-      path:
-        '/api/ghost/dev/users/6017d641860f43b553b21602/comments/607406b523637659bd4e2d1f',
+      path: '/api/ghost/dev/users/6017d641860f43b553b21602/comments/607406b523637659bd4e2d1f',
       pathParameters: { username: 'ghost', environment: 'dev' },
       body: JSON.stringify(user),
     };
@@ -588,8 +588,7 @@ describe('merge nested entities', () => {
     const user = { rating: 2 };
 
     const event = {
-      path:
-        '/api/ghost/dev/users/6017d641860f43b553b21602/comments/607406b523637659bd4e2d1f',
+      path: '/api/ghost/dev/users/6017d641860f43b553b21602/comments/607406b523637659bd4e2d1f',
       pathParameters: { username: 'ghost', environment: 'dev' },
       body: JSON.stringify(user),
     };
@@ -611,5 +610,19 @@ describe('merge nested entities', () => {
     expect(doc.environments[0].dev.users.length).toBe(1);
     expect(doc.environments[0].dev.users[0].comments[0].rating).toBe(2);
     await mongoose.connection.close();
+  });
+
+  test('not existing id', async () => {
+    const user = { rating: 2 };
+
+    const event = {
+      path: '/api/ghost/dev/users/6017d641860f43b553b21602/comments/607406b523637659bd4e2d1e',
+      pathParameters: { username: 'ghost', environment: 'dev' },
+      body: JSON.stringify(user),
+    };
+
+    const response = await mergeEntityWrapper(event);
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toMatch('Entity not found.');
   });
 });
