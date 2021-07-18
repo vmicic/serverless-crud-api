@@ -1,10 +1,10 @@
 # serverless-crud-api
 
-### description
+## Description
 
 Serverless function which can create arbitrary entities.
 
-### how to run
+## How to run
 
 - `brew install node`
 - `brew tap mongodb/brew`
@@ -19,6 +19,8 @@ In project root:
 - create env variable MONDODB_URI with local mongodb path as value
 - `npm install`
 - `sls offline`
+
+## Requests
 
 ### schema requests:
 
